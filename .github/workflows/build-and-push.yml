@@ -31,5 +31,5 @@ jobs:
           ECR_REPOSITORY: yarin-noa-project
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f status-page/Dockerfile status-page
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
