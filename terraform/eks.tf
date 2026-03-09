@@ -3,13 +3,23 @@ module "eks" {
   version = "~> 21.0"
 
   name               = "yarin-noa-cluster"
-  kubernetes_version = "1.34"
+  kubernetes_version = "1.35"
 
-  # --- התוספת החדשה שלנו ---
+# --- חלק חדש: תוספים קריטיים לרשת (פותר את הבעיה שהנודים לא עולים) ---
   addons = {
-    coredns    = {} # אחראי על ניתוב שמות (DNS) בתוך הקלאסטר
-    kube-proxy = {} # אחראי על התקשורת בין הפודים
-    vpc-cni    = {} # הפלאגין החסר! אחראי על חלוקת כתובות IP
+    # תוסף הרשת שנותן כתובות IP לפודים
+    vpc-cni    = {
+      most_recent    = true
+      before_compute = true  # מתקין את הרשת לפני השרתים
+    }
+    # שירות השמות הפנימי של הקלאסטר
+    coredns    = {
+      most_recent = true
+    }
+    # אחראי על ניתוב התקשורת בתוך הקלאסטר
+    kube-proxy = {
+      most_recent = true
+    }
   }
   # -----------------------
 
