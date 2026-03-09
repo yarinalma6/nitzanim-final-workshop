@@ -31,5 +31,9 @@ jobs:
           ECR_REPOSITORY: yarin-noa-project
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f status-page/Dockerfile status-page
+          # בונה את התמונה עם שתי תגיות: גם ה-SHA וגם latest
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest -f status-page/Dockerfile status-page
+          
+          # דוחף את שתי הגרסאות ל-ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
