@@ -3,7 +3,15 @@ module "eks" {
   version = "~> 21.0"
 
   name               = "yarin-noa-cluster"
-  kubernetes_version = "1.33"
+  kubernetes_version = "1.34"
+
+  # --- התוספת החדשה שלנו ---
+  addons = {
+    coredns    = {} # אחראי על ניתוב שמות (DNS) בתוך הקלאסטר
+    kube-proxy = {} # אחראי על התקשורת בין הפודים
+    vpc-cni    = {} # הפלאגין החסר! אחראי על חלוקת כתובות IP
+  }
+  # -----------------------
 
   # Optional
   endpoint_public_access = true
