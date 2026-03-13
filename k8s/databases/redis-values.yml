@@ -1,4 +1,3 @@
-
 # הגדרות עבור Redis
 redis:
   architecture: standalone

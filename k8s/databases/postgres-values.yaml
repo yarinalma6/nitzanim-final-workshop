@@ -1,4 +1,4 @@
-# הגדרות עבור PostgreSQL
+# הגדרות עבור PostgresSQL
 postgresql:
   architecture: standalone
   auth:
