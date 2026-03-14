@@ -25,3 +25,9 @@ Shows:
 - Pod CPU usage
 - Pod memory usage
 - Pod restarts
+
+## Logs check
+Grafana -> Explore -> Loki
+
+Query:
+{job="varlogs"}

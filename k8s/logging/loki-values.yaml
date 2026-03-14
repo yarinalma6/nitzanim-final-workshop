@@ -1,7 +1,5 @@
-loki:
-  enabled: true
-  persistence:
-    enabled: false
-
 promtail:
+  enabled: true
+
+loki:
   enabled: true
