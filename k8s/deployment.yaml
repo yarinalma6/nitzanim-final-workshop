@@ -16,7 +16,7 @@ spec:
       initContainers:
         - name: run-migrations
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
-          workingDir: /app/statuspage  # <--- הפתרון הקסום לשגיאת הנתיבים!
+          imagePullPolicy: Always
           command: [ "python" ]
           args: [ "manage.py", "migrate", "--noinput" ]
           env:
@@ -33,6 +33,7 @@ spec:
       containers:
       - name: statuspage-container
         image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
+        imagePullPolicy: Always
         ports:
           - containerPort: 8000
         env:
