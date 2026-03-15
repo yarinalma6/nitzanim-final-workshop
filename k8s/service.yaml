@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: status-page-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80        # הפורט שנקיש בדפדפן
+      targetPort: 8000 # הפורט שהאפליקציה מקשיבה לו
+  selector:
+    app: statuspage    # חייב להתאים ל-Labels ב-Deployment
