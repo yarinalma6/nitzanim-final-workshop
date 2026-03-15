@@ -12,42 +12,37 @@ spec:
       labels:
         app: statuspage
     spec:
+      # --- שלב המיגרציות ---
+      initContainers:
+      - name: run-migrations
+        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
+        command: ["python", "statuspage/manage.py", "migrate", "--noinput"]
+        env:
+          - name: DB_HOST
+            value: "statuspage-postgres-postgresql"
+          - name: DB_NAME
+            value: "statuspage"
+          - name: DB_USER
+            value: "postgres"
+        envFrom:
+          - secretRef:
+              name: statuspage-app-secrets
+
+      # --- האפליקציה הראשי ---
       containers:
       - name: statuspage-container
         image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
         ports:
           - containerPort: 8000
         env:
-          - name: DEBUG
-            valueFrom:
-              secretKeyRef:
-                name: statuspage-app-secret
-                key: debug-mode
-
-          - name: SECRET_KEY
-            valueFrom:
-              secretKeyRef:
-                name: statuspage-app-secret
-                key: django-secret-key
-
-          # הגדרות פוסטגרס
           - name: DB_HOST
-            value: "statuspage-postgres-postgresql" # השם של ה-Service שנוצר
+            value: "statuspage-postgres-postgresql"
           - name: DB_NAME
             value: "statuspage"
           - name: DB_USER
             value: "postgres"
-          - name: DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: my-pg-secret
-                key: postgres-password
-
-          # הגדרות רדיס
           - name: REDIS_URL
             value: "redis://statuspage-redis-master:6379"
-          - name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: my-redis-secret
-                key: redis-password
+        envFrom:
+          - secretRef:
+              name: statuspage-app-secrets
