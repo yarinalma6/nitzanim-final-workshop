@@ -14,20 +14,21 @@ spec:
     spec:
       # --- שלב המיגרציות ---
       initContainers:
-      - name: run-migrations
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
-        command: ["python", "statuspage/manage.py", "migrate", "--noinput"]
-        env:
-          - name: DB_HOST
-            value: "statuspage-postgres-postgresql"
-          - name: DB_NAME
-            value: "statuspage"
-          - name: DB_USER
-            value: "postgres"
-        envFrom:
-          - secretRef:
-              name: statuspage-app-secrets
-
+        - name: run-migrations
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
+          workingDir: /app/statuspage  # <--- הפתרון הקסום לשגיאת הנתיבים!
+          command: [ "python" ]
+          args: [ "manage.py", "migrate", "--noinput" ]
+          env:
+            - name: DB_HOST
+              value: "statuspage-postgres-postgresql"
+            - name: DB_NAME
+              value: "statuspage"
+            - name: DB_USER
+              value: "postgres"
+          envFrom:
+            - secretRef:
+                name: statuspage-app-secrets
       # --- האפליקציה הראשית ---
       containers:
       - name: statuspage-container
