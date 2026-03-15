@@ -1,6 +1,17 @@
 # הגדרות עבור PostgresSQL
-postgresql:
-  architecture: standalone
-  auth:
-    database: "my_database_name"     # שם בסיס הנתונים שיווצר
-    existingSecret: "my-pg-secret"  # שם ה-Secret הקיים המכיל סיסמה
+# הגדרת תצורת השרת - שרת בודד ולא רפליקציות
+architecture: standalone
+
+# הגדרות התחברות ואבטחה
+auth:
+  database: "statuspage"           # שם הדאטה-בייס שהאפליקציה שלנו דורשת
+  existingSecret: "my-pg-secret"   # הפניה לסוד שייוצר על ידי ה-ESO
+
+# הגדרות השרת הראשי (Primary)
+primary:
+  # הגדרות אחסון כדי שהנתונים לא יימחקו בנפילת פוד
+  persistence:
+    enabled: true                  # הפעלת דיסק חיצוני (PVC)
+    size: "8Gi"                    # נפח הדיסק
+    accessModes:
+      - "ReadWriteOnce"            # הגבלת גישה לשרת אחד בלבד

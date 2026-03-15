@@ -19,6 +19,35 @@ spec:
           - containerPort: 8000
         env:
           - name: DEBUG
-            value: "True"
+            valueFrom:
+              secretKeyRef:
+                name: statuspage-app-secret
+                key: debug-mode
+
           - name: SECRET_KEY
-            value: "super-secret-temporary-key"
+            valueFrom:
+              secretKeyRef:
+                name: statuspage-app-secret
+                key: django-secret-key
+
+          # הגדרות פוסטגרס
+          - name: DB_HOST
+            value: "statuspage-postgres-postgresql" # השם של ה-Service שנוצר
+          - name: DB_NAME
+            value: "statuspage"
+          - name: DB_USER
+            value: "postgres"
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-pg-secret
+                key: postgres-password
+
+          # הגדרות רדיס
+          - name: REDIS_URL
+            value: "redis://statuspage-redis-master:6379"
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-redis-secret
+                key: redis-password

@@ -20,6 +20,10 @@ module "eks" {
     kube-proxy = {
       most_recent = true
     }
+    # הדרייבר שמאפשר לקלאסטר ליצור דיסקים (EBS) עבור פוסטגרס ורדיס
+    aws-ebs-csi-driver = {
+      most_recent = true
+    }
   }
   # -----------------------
 
@@ -28,6 +32,21 @@ module "eks" {
 
   # Optional: Adds the current caller identity as an administrator via cluster access entry
   enable_cluster_creator_admin_permissions = true
+  access_entries = {
+    noa_admin = {
+      kubernetes_groups = []
+      principal_arn     = "arn:aws:iam::992382545251:user/noababliki"
+
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
 
   # הגדרת השרתים שיריצו את האפליקציות שלכם
   eks_managed_node_groups = {

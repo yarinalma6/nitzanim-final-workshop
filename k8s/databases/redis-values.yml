@@ -1,5 +1,8 @@
 # הגדרות עבור Redis
-redis:
-  architecture: standalone
-  auth:
-    existingSecret: "my-redis-secret" # שם ה-Secret הקיים עבור רדיס
+# הגדרת רדיס כשרת בודד ללא רפליקציות
+architecture: standalone
+
+# הגדרות אבטחה
+auth:
+  # חיבור לסוד שייוצר על ידי ה-ESO
+  existingSecret: "my-redis-secret"

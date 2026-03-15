@@ -16,7 +16,7 @@ RUN pip install --user --no-cache-dir -r requirements.txt
 
 
 FROM python:3.10-slim
-WORKDIR /app
+WORKDIR /app/statuspage
 # מעתיקים את הספריות מהבילדר
 COPY --from=builder /root/.local /root/.local
 # מעדכנים את ה-PATH כדי שהמערכת תכיר את gunicorn
