@@ -17,6 +17,10 @@ RUN pip install --user --no-cache-dir -r requirements.txt
 
 FROM python:3.10-slim
 WORKDIR /app
+# הוספנו את השורות האלו - התקנת הספריה שחסרה להרצה
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
 # מעתיקים את הספריות מהבילדר
 COPY --from=builder /root/.local /root/.local
 # מעדכנים את ה-PATH כדי שהמערכת תכיר את gunicorn
