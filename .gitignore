@@ -219,3 +219,10 @@ __marimo__/
 **/*_override.tf.json
 **/override.tf
 **/override.tf.json
+# Temporary installation files
+eksctl.zip
+
+# Task 3.5 Secrets configuration (Local only)
+eso.yaml
+policy.json
+trust.json
