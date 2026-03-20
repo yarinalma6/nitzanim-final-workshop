@@ -1,31 +1,30 @@
-# משתמשים בתמונה של פייתון כבסיס
-FROM python:3.10-slim AS builder
-# הגדרת משתני סביבה כדי שפייתון לא ייצור קבצי .pyc מיותרים
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-# התקנת תלויות של מערכת ההפעלה (אם צריך קומפיילרים)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-# הגדרת תיקיית עבודה
-WORKDIR /app
-# העתקת קובץ הדרישות והתקנת הספריות
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+# --- שלב 1: קימפול העיצוב (Node.js) ---
+FROM node:18-slim AS frontend
+WORKDIR /frontend
+# העתקת קבצי ניהול חבילות והתקנה
+COPY statuspage/project-static/package.json statuspage/project-static/yarn.lock ./
+RUN yarn install
+# העתקת העיצוב וקימפול
+COPY statuspage/project-static/ ./
+RUN yarn bundle || true
 
-
+# --- שלב 2: פייתון (Production) ---
 FROM python:3.10-slim
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# התקנת תלויות מערכת
+RUN apt-get update && apt-get install -y build-essential libpq-dev libpq5 && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
-# הוספנו את השורות האלו - התקנת הספריה שחסרה להרצה
-RUN apt-get update && apt-get install -y \
-    libpq5 \
-    && rm -rf /var/lib/apt/lists/*
-# מעתיקים את הספריות מהבילדר
-COPY --from=builder /root/.local /root/.local
-# מעדכנים את ה-PATH כדי שהמערכת תכיר את gunicorn
-ENV PATH=/root/.local/bin:$PATH
-# מעתיקים את הקוד (ה-dockerignore כבר דואג שזה יהיה נקי)
+COPY requirements.txt .
+# התקנת כל הדרישות + rq-scheduler מראש כדי שלא יהיו שגיאות
+RUN pip install --no-cache-dir -r requirements.txt rq-scheduler
+
+# העתקת כל הקוד
 COPY . .
+# העתקת העיצוב המוכן משלב 1 ישר לתיקייה הנכונה
+COPY --from=frontend /frontend/dist/ /app/statuspage/project-static/dist/
+
 # הפקודה שמניעה את הכל
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "statuspage.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "statuspage", "statuspage.wsgi:application"]
