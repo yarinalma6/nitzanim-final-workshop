@@ -1,3 +1,17 @@
+# ----- שלב 1: בניית העיצוב (Frontend) באמצעות Node.js -----
+# משתמשים בתמונה של Node כבסיס כדי לקמפל את העיצוב
+FROM node:18 AS frontend
+# הגדרת תיקיית עבודה
+WORKDIR /app
+# העתקת קבצי ניהול החבילות של העיצוב והתקנתן
+COPY statuspage/project-static/package.json statuspage/project-static/yarn.lock ./
+RUN yarn install
+# העתקת שאר קבצי העיצוב (SCSS/TS) וקימפול שלהם ל-CSS תקין
+COPY statuspage/project-static/ ./
+RUN yarn bundle
+
+
+# ----- שלב 2: סביבת הפייתון והתקנת ספריות (Builder) -----
 # משתמשים בתמונה של פייתון כבסיס
 FROM python:3.10-slim AS builder
 # הגדרת משתני סביבה כדי שפייתון לא ייצור קבצי .pyc מיותרים
@@ -15,9 +29,10 @@ COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
 
+# ----- שלב 3: הפוד הסופי (Production) -----
 FROM python:3.10-slim
 WORKDIR /app
-# הוספנו את השורות האלו - התקנת הספריה שחסרה להרצה
+# הוספנו את השורות האלו - התקנת הספריה שחסרה להרצה ב-Postgres
 RUN apt-get update && apt-get install -y \
     libpq5 \
     && rm -rf /var/lib/apt/lists/*
@@ -27,5 +42,7 @@ COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 # מעתיקים את הקוד (ה-dockerignore כבר דואג שזה יהיה נקי)
 COPY . .
+# פה הקסם: מעתיקים את העיצוב המוכן משלב 1, ישר לתיקייה שפייתון מחפש!
+COPY --from=frontend /app/dist/ /app/statuspage/project-static/dist/
 # הפקודה שמניעה את הכל - שים לב לשינוי בשם החבילה
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "statuspage.wsgi:application"]
