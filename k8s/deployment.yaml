@@ -4,7 +4,7 @@
 # ותוודא שהמיגרציות ירוצו לפני שהאתר יעלה לאוויר.
 # ==============================================================================
 # ==============================================================================
-# תצורת פריסה (Deployment) - גרסה יציבה ונקייה
+# תצורת פריסה (Deployment) עבור אפליקציית ה-Status Page בקוברנטיס
 # ==============================================================================
 
 apiVersion: apps/v1
@@ -25,11 +25,12 @@ spec:
         - name: run-migrations
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           imagePullPolicy: Always
-          # נתיב עבודה מדויק לפי עץ התיקיות
           workingDir: /app/statuspage
-          command: [ "/bin/sh", "-c" ]
+          command: ["/bin/sh", "-c"]
           args:
             - |
+              # התקנה בזמן אמת של rq-scheduler כדי למנוע קריסה במיגרציות
+              python -m pip install --target . rq-scheduler --no-cache-dir
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -43,32 +44,7 @@ spec:
                 secretKeyRef:
                   name: statuspage-app-secrets
                   key: DB_PASSWORD
-          envFrom:
-            - secretRef:
-                name: statuspage-app-secrets
-
-      containers:
-        - name: statuspage-container
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
-          imagePullPolicy: Always
-          workingDir: /app/statuspage
-          ports:
-            - containerPort: 8000
-          command: [ "/bin/sh", "-c" ]
-          args:
-            - |
-              # שימוש בדגל insecure כדי להציג את העיצוב הקיים
-              python manage.py runserver 0.0.0.0:8000 --insecure
-          env:
-            - name: DB_HOST
-              value: "statuspage-postgres-postgresql"
-            - name: DB_NAME
-              value: "statuspage"
-            - name: DB_USER
-              value: "postgres"
-            - name: REDIS_URL
-              value: "redis://statuspage-redis-master:6379"
-            - name: DB_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: statuspage-app-secrets
@@ -76,3 +52,39 @@ spec:
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets
+
+      containers:
+      - name: statuspage-container
+        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
+        imagePullPolicy: Always
+        workingDir: /app/statuspage
+        ports:
+          - containerPort: 8000
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            # התקנה בזמן אמת של rq-scheduler גם בקונטיינר הראשי
+            python -m pip install --target . rq-scheduler --no-cache-dir
+            python manage.py runserver 0.0.0.0:8000
+        env:
+          - name: DB_HOST
+            value: "statuspage-postgres-postgresql"
+          - name: DB_NAME
+            value: "statuspage"
+          - name: DB_USER
+            value: "postgres"
+          - name: REDIS_URL
+            value: "redis://statuspage-redis-master:6379"
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: statuspage-app-secrets
+                key: DB_PASSWORD
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: statuspage-app-secrets
+                key: DB_PASSWORD
+        envFrom:
+          - secretRef:
+              name: statuspage-app-secrets
