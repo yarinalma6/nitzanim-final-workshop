@@ -1,17 +1,16 @@
 # ----- שלב 1: בניית העיצוב (Frontend) באמצעות Node.js -----
 # משתמשים בתמונה של Node כבסיס כדי לקמפל את העיצוב
 FROM node:18 AS frontend
-# יוצרים תיקייה נפרדת לעיצוב כדי למנוע שגיאות זיכרון בקימפול
-WORKDIR /src_frontend
+# הגדרת תיקיית עבודה
+WORKDIR /app
 # העתקת קבצי ניהול החבילות של העיצוב והתקנתן
+# הנתיב תוקן לפי עץ התיקיות: statuspage/project-static/
 COPY statuspage/project-static/package.json statuspage/project-static/yarn.lock ./
 RUN yarn install
 # העתקת שאר קבצי העיצוב (SCSS/TS) וקימפול שלהם ל-CSS תקין
 COPY statuspage/project-static/ ./
-# מריצים את הקימפול עם הגדלת זיכרון. הוספנו || true כדי שה-CSS יעבור גם אם ה-JS של ה-Toast חסר
-RUN NODE_OPTIONS=--max-old-space-size=4096 yarn bundle || true
-# מוודאים שתיקיית dist קיימת בכל מקרה כדי שהבנייה לא תיכשל
-RUN mkdir -p dist
+# מריצים את הקימפול. הוספנו "|| true" כדי שגם אם ה-JS נכשל, ה-CSS יעבור
+RUN yarn bundle || true
 
 
 # ----- שלב 2: סביבת הפייתון והתקנת ספריות (Builder) -----
@@ -43,11 +42,11 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /root/.local /root/.local
 # מעדכנים את ה-PATH כדי שהמערכת תכיר את gunicorn
 ENV PATH=/root/.local/bin:$PATH
-# מעתיקים את הקוד (ה-dockerignore כבר דואג שזה יהיה נקי)
+# מעתיקים את כל התוכן של תיקיית status-page לתוך /app בקונטיינר
 COPY . .
-# פה הקסם: מעתיקים את העיצוב המוכן משלב 1, ישר לתיקייה שפייתון מחפש
-COPY --from=frontend /src_frontend/dist/ /app/statuspage/project-static/dist/
-# הרצת איסוף קבצי הסטטיקה בנתיב המדויק לפי עץ התיקיות
+# פה הקסם: מעתיקים את העיצוב המוכן משלב 1, ישר לתיקייה שפייתון מחפש!
+COPY --from=frontend /app/dist/ /app/statuspage/project-static/dist/
+# הרצת איסוף קבצי הסטטיקה - הנתיב תוקן ל-statuspage/manage.py
 RUN python statuspage/manage.py collectstatic --no-input
 # הפקודה שמניעה את הכל
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "/app/statuspage", "statuspage.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "statuspage", "statuspage.wsgi:application"]
