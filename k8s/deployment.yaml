@@ -3,11 +3,13 @@
 # המטרה: הגדרת האופן שבו האפליקציה תרוץ, תתחבר למסדי הנתונים (DB/Redis),
 # ותוודא שהמיגרציות ירוצו לפני שהאתר יעלה לאוויר.
 # ==============================================================================
+# ==============================================================================
+# תצורת פריסה (Deployment) - גרסה יציבה ונקייה
+# ==============================================================================
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  # השם הייחודי של ה-Deployment הזה
   name: status-page
 spec:
   replicas: 1
@@ -19,19 +21,15 @@ spec:
       labels:
         app: statuspage
     spec:
-      # ========================================================================
-      # שלב ה-InitContainers: הרצת מיגרציות לפני עליית האתר
-      # ========================================================================
       initContainers:
         - name: run-migrations
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           imagePullPolicy: Always
-          # קריטי: תיקון נתיב עבודה לתיקייה שבה נמצא ה-manage.py
+          # נתיב עבודה מדויק לפי עץ התיקיות
           workingDir: /app/statuspage
           command: [ "/bin/sh", "-c" ]
           args:
             - |
-              # הרצת המיגרציות (הספריות כבר מותקנות ב-Image)
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -49,21 +47,17 @@ spec:
             - secretRef:
                 name: statuspage-app-secrets
 
-      # ========================================================================
-      # שלב ה-Containers: האפליקציה עצמה
-      # ========================================================================
       containers:
         - name: statuspage-container
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           imagePullPolicy: Always
-          # תיקון נתיב עבודה
           workingDir: /app/statuspage
           ports:
             - containerPort: 8000
           command: [ "/bin/sh", "-c" ]
           args:
             - |
-              # הרצה עם דגל --insecure כדי שהעיצוב (CSS) יוצג למשתמשים
+              # שימוש בדגל insecure כדי להציג את העיצוב הקיים
               python manage.py runserver 0.0.0.0:8000 --insecure
           env:
             - name: DB_HOST
