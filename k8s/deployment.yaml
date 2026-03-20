@@ -4,119 +4,63 @@
 # ותוודא שהמיגרציות ירוצו לפני שהאתר יעלה לאוויר.
 # ==============================================================================
 
-# מגדיר את הגרסה של ה-API של קוברנטיס שנשתמש בה (v1 מתאים למשאבי Deployment).
 apiVersion: apps/v1
-
-# סוג המשאב שאנחנו יוצרים. Deployment מנהל את יצירת הפודים ומבטיח שהם תמיד רצים.
 kind: Deployment
-
 metadata:
-  # השם הייחודי של ה-Deployment הזה בתוך הקלאסטר.
   name: status-page
-
 spec:
-  # כמה עותקים (Pods) של האפליקציה אנחנו רוצים שירוצו בו-זמנית.
-  # קבענו ל-1 כרגע כדי לחסוך משאבים בשרתים וכדי להקל על הדיבאג (Troubleshooting).
   replicas: 1
-
-  # ה-Selector קובע על אילו פודים ה-Deployment הזה "אחראי". הוא מחפש פודים עם הלייבל הספציפי.
   selector:
     matchLabels:
       app: statuspage
-
-  # Template מגדיר איך כל פוד ייראה (העיצוב של ה"תבנית" לפודים).
   template:
     metadata:
-      # תגיות (Labels) שיוצמדו לכל פוד שיווצר, כדי שה-Selector למעלה יוכל למצוא אותו.
       labels:
         app: statuspage
     spec:
-
-      # ========================================================================
-      # שלב ה-InitContainers: "המאבטח בכניסה"
-      # קונטיינרים אלה רצים אחד אחרי השני *לפני* שהאפליקציה הראשית עולה.
-      # המטרה: הכנה מוקדמת (מיגרציות) ווידוא שהדאטה-בייס מוכן.
-      # ========================================================================
       initContainers:
-        # שם הקונטיינר של המיגרציה
         - name: run-migrations
-          # כתובת האימג' ב-AWS ECR. אותו אימג' משמש גם לאפליקציה וגם למיגרציה.
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
-          # מחייב את קוברנטיס למשוך את האימג' מחדש בכל פעם שהפוד עולה (כדי להביא עדכוני קוד).
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           imagePullPolicy: Always
-
-          # קריטי! מגדיר מאיזו תיקייה בתוך הקונטיינר ירוצו הפקודות.
-          # גילינו ש-manage.py יושב תחת /app/statuspage, לכן חייבים להיות שם.
           workingDir: /app/statuspage
-
-          # עוקף את הפקודה המקורית של האימג' ומשתמש ב-Shell כדי להריץ רצף פקודות.
           command: ["/bin/sh", "-c"]
-          # סקריפט הפקודות (מופרד בשורות בעזרת |):
           args:
             - |
-              # פתרון לבעיית הספריה החסרה: מתקין את rq-scheduler *בזמן אמת* ישירות לתיקייה הנוכחית (--target .).
-              python -m pip install --target . rq-scheduler --no-cache-dir
-              # הרצת המיגרציות ללא בקשת אישור משתמש (--noinput). ה-DB יתעדכן בשינויי הקוד.
+              # הרצת המיגרציות בלבד (הספריות כבר מותקנות בתוך ה-Image)
               python manage.py migrate --noinput
-
-          # משתני סביבה רגילים שהמיגרציה חייבת כדי לדעת לאן ואיך להתחבר.
           env:
-            # שם ה-Service של פוסטגרס (כפי שהוא מוכר בתוך קוברנטיס).
             - name: DB_HOST
               value: "statuspage-postgres-postgresql"
-            # שם בסיס הנתונים שנוצר.
             - name: DB_NAME
               value: "statuspage"
-            # משתמש ברירת המחדל.
             - name: DB_USER
               value: "postgres"
-
-            # פתרון לבעיית 'fe_sendauth': הזרקה מפורשת של הסיסמה.
-            # אנחנו קוראים מתוך קובץ ה-Secrets של קוברנטיס את המפתח המדויק.
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: statuspage-app-secrets # השם של ה-Secret בקלאסטר
-                  key: DB_PASSWORD             # המפתח (Key) בתוך ה-Secret
-            # למקרה שדג'נגו יחפש את הסיסמה תחת השם הזה, מזריקים שוב ליתר ביטחון.
+                  name: statuspage-app-secrets
+                  key: DB_PASSWORD
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: statuspage-app-secrets
                   key: DB_PASSWORD
-
-          # בנוסף למשתנים המפורשים, טוען את כל שאר הסודות (כמו SECRET_KEY של דג'נגו) ישר לקונטיינר.
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets
 
-      # ========================================================================
-      # שלב ה-Containers: "האפליקציה עצמה"
-      # אלו הקונטיינרים שירוצו באופן קבוע ויתנו שירות למשתמשים.
-      # ========================================================================
       containers:
-      # שם הקונטיינר שמריץ את השרת
       - name: statuspage-container
-        # שוב, משתמשים באותו אימג'.
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
+        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
         imagePullPolicy: Always
         workingDir: /app/statuspage
-
-        # חושף את פורט 8000 (הפורט שעליו דג'נגו מוגדר להאזין) כלפי חוץ.
         ports:
           - containerPort: 8000
-
-        # שוב, עוקפים את פקודת ההפעלה המקורית (entrypoint).
         command: ["/bin/sh", "-c"]
         args:
           - |
-            # מתקינים את הספרייה החסרה גם כאן, כי זה קונטיינר נפרד שזקוק לה כדי לרוץ.
-            python -m pip install --target . rq-scheduler --no-cache-dir
-            # מריצים את השרת של דג'נגו. 
-            # הוספנו את הדגל --insecure כדי שיסכים להגיש קבצי CSS ו-JS בסביבת ייצור (Production)
+            # מריצים את השרת עם דגל --insecure כדי להציג את העיצוב ב-Production
             python manage.py runserver 0.0.0.0:8000 --insecure
-
-        # סטים זהים של משתני סביבה כמו במיגרציה (כי השרת הראשי גם צריך לדבר עם ה-DB).
         env:
           - name: DB_HOST
             value: "statuspage-postgres-postgresql"
@@ -124,12 +68,8 @@ spec:
             value: "statuspage"
           - name: DB_USER
             value: "postgres"
-
-          # הכתובת של Redis, קריטית לתורי המשימות (rq_scheduler). מוצבת כאן כדי שדג'נגו יידע היכן הקאש.
           - name: REDIS_URL
             value: "redis://statuspage-redis-master:6379"
-
-          # הזרקה מפורשת של סיסמת פוסטגרס.
           - name: DB_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -140,8 +80,6 @@ spec:
               secretKeyRef:
                 name: statuspage-app-secrets
                 key: DB_PASSWORD
-
-        # משיכת שאר הסודות מקוברנטיס.
         envFrom:
           - secretRef:
               name: statuspage-app-secrets
