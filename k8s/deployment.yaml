@@ -1,5 +1,5 @@
 # ==============================================================================
-# תצורת פריסה (Deployment) - גרסה משוחזרת ויציבה
+# תצורת פריסה (Deployment) עבור אפליקציית ה-Status Page בקוברנטיס
 # ==============================================================================
 
 apiVersion: apps/v1
@@ -17,16 +17,16 @@ spec:
         app: statuspage
     spec:
       initContainers:
+        # ----------------------------------------------------------------------
+        # הרצת מיגרציות לפני עליית האתר
+        # ----------------------------------------------------------------------
         - name: run-migrations
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           imagePullPolicy: Always
-          # התיקייה שבה נמצא manage.py
           workingDir: /app/statuspage
-          command: ["/bin/sh", "-c"]
+          command: [ "/bin/sh", "-c" ]
           args:
             - |
-              # התקנה בזמן אמת כפי שעבד לך בעבר
-              python -m pip install --target . rq-scheduler --no-cache-dir
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -40,7 +40,35 @@ spec:
                 secretKeyRef:
                   name: statuspage-app-secrets
                   key: DB_PASSWORD
-            - name: POSTGRES_PASSWORD
+          envFrom:
+            - secretRef:
+                name: statuspage-app-secrets
+
+      containers:
+        # ----------------------------------------------------------------------
+        # הקונטיינר הראשי של האפליקציה
+        # ----------------------------------------------------------------------
+        - name: statuspage-container
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
+          imagePullPolicy: Always
+          workingDir: /app/statuspage
+          ports:
+            - containerPort: 8000
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              # שימוש ב-runserver עם insecure כדי להגיש את העיצוב (CSS) בקוברנטיס
+              python manage.py runserver 0.0.0.0:8000 --insecure
+          env:
+            - name: DB_HOST
+              value: "statuspage-postgres-postgresql"
+            - name: DB_NAME
+              value: "statuspage"
+            - name: DB_USER
+              value: "postgres"
+            - name: REDIS_URL
+              value: "redis://statuspage-redis-master:6379"
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: statuspage-app-secrets
@@ -48,39 +76,3 @@ spec:
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets
-
-      containers:
-      - name: statuspage-container
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
-        imagePullPolicy: Always
-        workingDir: /app/statuspage
-        ports:
-          - containerPort: 8000
-        command: ["/bin/sh", "-c"]
-        args:
-          - |
-            # התקנה והרצה עם דגל insecure לעיצוב
-            python -m pip install --target . rq-scheduler --no-cache-dir
-            python manage.py runserver 0.0.0.0:8000 --insecure
-        env:
-          - name: DB_HOST
-            value: "statuspage-postgres-postgresql"
-          - name: DB_NAME
-            value: "statuspage"
-          - name: DB_USER
-            value: "postgres"
-          - name: REDIS_URL
-            value: "redis://statuspage-redis-master:6379"
-          - name: DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: statuspage-app-secrets
-                key: DB_PASSWORD
-          - name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: statuspage-app-secrets
-                key: DB_PASSWORD
-        envFrom:
-          - secretRef:
-              name: statuspage-app-secrets
