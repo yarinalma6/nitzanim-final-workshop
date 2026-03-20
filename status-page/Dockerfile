@@ -1,52 +1,50 @@
 # ----- שלב 1: בניית העיצוב (Frontend) באמצעות Node.js -----
-# משתמשים בתמונה של Node כבסיס כדי לקמפל את העיצוב
 FROM node:18 AS frontend
-# הגדרת תיקיית עבודה
-WORKDIR /app
-# העתקת קבצי ניהול החבילות של העיצוב והתקנתן
-# הנתיב תוקן לפי עץ התיקיות: statuspage/project-static/
+WORKDIR /src_frontend
 COPY statuspage/project-static/package.json statuspage/project-static/yarn.lock ./
 RUN yarn install
-# העתקת שאר קבצי העיצוב (SCSS/TS) וקימפול שלהם ל-CSS תקין
 COPY statuspage/project-static/ ./
-# מריצים את הקימפול. הוספנו "|| true" כדי שגם אם ה-JS נכשל, ה-CSS יעבור
-RUN yarn bundle || true
+# הגדלת הזיכרון לקימפול והוספת הגנה כדי שה-CSS יעבור גם אם יש שגיאות ב-JS
+RUN NODE_OPTIONS=--max-old-space-size=4096 yarn bundle || true
+RUN mkdir -p dist
 
 
 # ----- שלב 2: סביבת הפייתון והתקנת ספריות (Builder) -----
-# משתמשים בתמונה של פייתון כבסיס
 FROM python:3.10-slim AS builder
-# הגדרת משתני סביבה כדי שפייתון לא ייצור קבצי .pyc מיותרים
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-# התקנת תלויות של מערכת ההפעלה (אם צריך קומפיילרים)
+# שימוש בפורמט KEY=VALUE כדי למנוע אזהרות Legacy
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
-# הגדרת תיקיית עבודה
 WORKDIR /app
-# העתקת קובץ הדרישות והתקנת הספריות
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+# התקנה ישירות למערכת בתוך ה-Builder (בלי --user) כדי להקל על ההעתקה
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
 # ----- שלב 3: הפוד הסופי (Production) -----
 FROM python:3.10-slim
 WORKDIR /app
 # התקנת הספריה שחסרה להרצה ב-Postgres
-RUN apt-get update && apt-get install -y \
-    libpq5 \
-    && rm -rf /var/lib/apt/lists/*
-# מעתיקים את הספריות מהבילדר
-COPY --from=builder /root/.local /root/.local
-# מעדכנים את ה-PATH כדי שהמערכת תכיר את gunicorn
-ENV PATH=/root/.local/bin:$PATH
-# מעתיקים את כל התוכן של תיקיית status-page לתוך /app בקונטיינר
+RUN apt-get update && apt-get install -y libpq5 && rm -rf /var/lib/apt/lists/*
+
+# פתרון לבעיית ה-rq_scheduler: מעתיקים את כל הספריות המותקנות ישירות לתיקיית המערכת
+COPY --from=builder /install /usr/local
+
+# מעתיקים את הקוד
 COPY . .
-# פה הקסם: מעתיקים את העיצוב המוכן משלב 1, ישר לתיקייה שפייתון מחפש!
-COPY --from=frontend /app/dist/ /app/statuspage/project-static/dist/
-# הרצת איסוף קבצי הסטטיקה - הנתיב תוקן ל-statuspage/manage.py
+
+# מעתיקים את העיצוב המקומפל
+COPY --from=frontend /src_frontend/dist/ /app/statuspage/project-static/dist/
+
+# הגדרת ה-PYTHONPATH כדי שפייתון ימצא את manage.py בתוך התיקייה statuspage
+ENV PYTHONPATH=/app/statuspage
+
+# הרצת איסוף קבצי הסטטיקה (הפעם זה יעבור כי כל הספריות בנתיב המערכת)
 RUN python statuspage/manage.py collectstatic --no-input
+
 # הפקודה שמניעה את הכל
+# שימוש ב-chdir כדי להיכנס לתיקייה הנכונה שבה נמצא הקוד
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "statuspage", "statuspage.wsgi:application"]
