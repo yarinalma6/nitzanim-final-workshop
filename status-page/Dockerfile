@@ -45,6 +45,6 @@ COPY . .
 # פה הקסם: מעתיקים את העיצוב המוכן משלב 1, ישר לתיקייה שפייתון מחפש!
 COPY --from=frontend /app/dist/ /app/statuspage/project-static/dist/
 # הרצת איסוף קבצי הסטטיקה כבר בשלב בניית האימג' כדי שהעיצוב יהיה מוכן מראש
-RUN python statuspage/manage.py collectstatic --no-input
+RUN python manage.py collectstatic --no-input
 # הפקודה שמניעה את הכל
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "statuspage.wsgi:application"]
