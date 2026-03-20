@@ -1,30 +1,31 @@
 # משתמשים בתמונה של פייתון כבסיס
-FROM python:3.10-slim
-
-# הגדרת משתני סביבה בפורמט תקין
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/statuspage
-
-# התקנת תלויות מערכת הפעלה (כולל אלו שצריך ל-psycopg2 ואיסוף סטטיקה)
+FROM python:3.10-slim AS builder
+# הגדרת משתני סביבה כדי שפייתון לא ייצור קבצי .pyc מיותרים
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+# התקנת תלויות של מערכת ההפעלה (אם צריך קומפיילרים)
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
-    libpq5 \
     && rm -rf /var/lib/apt/lists/*
-
 # הגדרת תיקיית עבודה
 WORKDIR /app
-
-# העתקת דרישות והתקנה גלובלית (מונע שגיאות של rq_scheduler)
+# העתקת קובץ הדרישות והתקנת הספריות
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --user --no-cache-dir -r requirements.txt
 
-# העתקת כל הקוד
+
+FROM python:3.10-slim
+WORKDIR /app
+# התקנת הספריה שחסרה להרצה
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+# מעתיקים את הספריות מהבילדר
+COPY --from=builder /root/.local /root/.local
+# מעדכנים את ה-PATH כדי שהמערכת תכיר את gunicorn
+ENV PATH=/root/.local/bin:$PATH
+# מעתיקים את הקוד (ה-dockerignore כבר דואג שזה יהיה נקי)
 COPY . .
-
-# הרצת איסוף הסטטיקה בזמן הבנייה - הנתיב תוקן לפי המבנה שלך
-RUN python statuspage/manage.py collectstatic --no-input
-
-# פקודת ההרצה שתמיד עבדה (עם chdir לתיקייה הנכונה)
+# הפקודה שמניעה את הכל - הנתיב הותאם למבנה statuspage.statuspage
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "statuspage", "statuspage.wsgi:application"]
