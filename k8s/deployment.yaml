@@ -1,7 +1,5 @@
 # ==============================================================================
 # תצורת פריסה (Deployment) עבור אפליקציית ה-Status Page בקוברנטיס
-# המטרה: הגדרת האופן שבו האפליקציה תרוץ, תתחבר למסדי הנתונים (DB/Redis),
-# ותוודא שהמיגרציות ירוצו לפני שהאתר יעלה לאוויר.
 # ==============================================================================
 
 apiVersion: apps/v1
@@ -22,11 +20,12 @@ spec:
         - name: run-migrations
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           imagePullPolicy: Always
+          # התיקייה שבה נמצא manage.py בתוך הקונטיינר
           workingDir: /app/statuspage
           command: ["/bin/sh", "-c"]
           args:
             - |
-              # הרצת המיגרציות בלבד (הספריות כבר מותקנות בתוך ה-Image)
+              # הרצת המיגרציות (הספריות כבר מותקנות ב-Image)
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -40,11 +39,6 @@ spec:
                 secretKeyRef:
                   name: statuspage-app-secrets
                   key: DB_PASSWORD
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: statuspage-app-secrets
-                  key: DB_PASSWORD
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets
@@ -53,13 +47,14 @@ spec:
       - name: statuspage-container
         image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
         imagePullPolicy: Always
+        # התיקייה שבה נמצא manage.py
         workingDir: /app/statuspage
         ports:
           - containerPort: 8000
         command: ["/bin/sh", "-c"]
         args:
           - |
-            # מריצים את השרת עם דגל --insecure כדי להציג את העיצוב ב-Production
+            # מריצים את השרת עם --insecure כדי להציג עיצוב
             python manage.py runserver 0.0.0.0:8000 --insecure
         env:
           - name: DB_HOST
@@ -71,11 +66,6 @@ spec:
           - name: REDIS_URL
             value: "redis://statuspage-redis-master:6379"
           - name: DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: statuspage-app-secrets
-                key: DB_PASSWORD
-          - name: POSTGRES_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: statuspage-app-secrets
