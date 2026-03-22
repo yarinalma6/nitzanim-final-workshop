@@ -24,6 +24,7 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
+              python -m pip install --target . rq-scheduler --no-cache-dir
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -55,6 +56,11 @@ spec:
         workingDir: /app/statuspage
         ports:
           - containerPort: 8000
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            python -m pip install --target . rq-scheduler --no-cache-dir
+            gunicorn --bind 0.0.0.0:8000 statuspage.wsgi:application
         env:
           - name: DB_HOST
             value: "statuspage-postgres-postgresql.default.svc.cluster.local"
