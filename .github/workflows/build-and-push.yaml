@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 permissions:
   id-token: write
-  contents: read
+  contents: write
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -37,3 +37,17 @@ jobs:
           # דוחף את שתי הגרסאות ל-ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Update image tag in deployment
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          sed -i "s|yarin-noa-project:.*|yarin-noa-project:$IMAGE_TAG|g" k8s/deployment.yaml
+
+      - name: Commit and push updated deployment
+        run: |
+          git config user.email "ci-bot@github.com"
+          git config user.name "GitHub CI"
+          git add k8s/deployment.yaml
+          git commit -m "ci: update image tag to ${{ github.sha }}"
+          git push

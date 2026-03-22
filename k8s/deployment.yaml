@@ -24,15 +24,16 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              python -m pip install --target . rq-scheduler --no-cache-dir
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
-              value: "statuspage-postgres-postgresql"
+              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
             - name: DB_NAME
               value: "statuspage"
             - name: DB_USER
               value: "postgres"
+            - name: REDIS_HOST
+              value: "statuspage-redis-master.default.svc.cluster.local"
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -49,28 +50,20 @@ spec:
 
       containers:
       - name: statuspage-container
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
+        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
         imagePullPolicy: Always
         workingDir: /app/statuspage
         ports:
           - containerPort: 8000
-        command: ["/bin/sh", "-c"]
-        args:
-          - |
-            python -m pip install --target . rq-scheduler --no-cache-dir
-            # הרצת collectstatic בזמן אמת כדי לוודא שהעיצוב קיים
-            python manage.py collectstatic --no-input
-            # שימוש ב-runserver עם insecure כדי להציג עיצוב
-            python manage.py runserver 0.0.0.0:8000 --insecure
         env:
           - name: DB_HOST
-            value: "statuspage-postgres-postgresql"
+            value: "statuspage-postgres-postgresql.default.svc.cluster.local"
           - name: DB_NAME
             value: "statuspage"
           - name: DB_USER
             value: "postgres"
-          - name: REDIS_URL
-            value: "redis://statuspage-redis-master:6379"
+          - name: REDIS_HOST
+            value: "statuspage-redis-master.default.svc.cluster.local"
           - name: DB_PASSWORD
             valueFrom:
               secretKeyRef:
