@@ -24,7 +24,7 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              python -m pip install --target . rq-scheduler --no-cache-dir
+              python -m pip install --target . rq-scheduler whitenoise --no-cache-dir
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -59,7 +59,8 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
           - |
-            python -m pip install --target . rq-scheduler --no-cache-dir
+            python -m pip install --target . rq-scheduler whitenoise --no-cache-dir
+            python manage.py collectstatic --noinput
             gunicorn --bind 0.0.0.0:8000 statuspage.wsgi:application
         env:
           - name: DB_HOST
