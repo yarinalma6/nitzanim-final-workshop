@@ -1,5 +1,5 @@
 # ==============================================================================
-# תצורת פריסה (Deployment) - תיקון משתני סביבה לחיבור דאטה-בייס
+# תצורת פריסה (Deployment) - גרסה נקייה עם תגית latest
 # ==============================================================================
 
 apiVersion: apps/v1
@@ -18,6 +18,7 @@ spec:
     spec:
       initContainers:
         - name: run-migrations
+          # נעול על latest כדי למנוע קונפליקטים עם ה-CI
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
           imagePullPolicy: Always
           workingDir: /app/statuspage
@@ -35,7 +36,6 @@ spec:
               value: "postgres"
             - name: REDIS_HOST
               value: "statuspage-redis-master.default.svc.cluster.local"
-            # הוספת POSTGRES_PASSWORD ל-Init Container (תיקון השגיאה fe_sendauth)
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -52,6 +52,7 @@ spec:
 
       containers:
       - name: statuspage-container
+        # נעול על latest
         image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
         imagePullPolicy: Always
         workingDir: /app/statuspage
