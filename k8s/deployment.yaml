@@ -18,13 +18,13 @@ spec:
     spec:
       initContainers:
         - name: run-migrations
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:5f4c6506023237be6b673fdc0c47ba054cc6a506
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:226d884220196e31a38edce8b0841330b383b083
           imagePullPolicy: Always
           workingDir: /app/statuspage
           command: ["/bin/sh", "-c"]
           args:
             - |
-              python -m pip install --target . rq-scheduler whitenoise --no-cache-dir
+              python -m pip install --target . rq-scheduler --no-cache-dir
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -51,7 +51,7 @@ spec:
 
       containers:
       - name: statuspage-container
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:5f4c6506023237be6b673fdc0c47ba054cc6a506
+        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:226d884220196e31a38edce8b0841330b383b083
         imagePullPolicy: Always
         workingDir: /app/statuspage
         ports:
@@ -59,8 +59,7 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
           - |
-            python -m pip install --target . rq-scheduler whitenoise --no-cache-dir
-            python manage.py collectstatic --noinput
+            python -m pip install --target . rq-scheduler --no-cache-dir
             gunicorn --bind 0.0.0.0:8000 statuspage.wsgi:application
         env:
           - name: DB_HOST

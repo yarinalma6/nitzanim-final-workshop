@@ -152,7 +152,4 @@ async function bundleAll() {
   await bundleScripts();
 }
 
-bundleAll().then(() => process.exit(0)).catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+bundleAll();

@@ -1,12 +1,11 @@
 # --- שלב 1: קימפול העיצוב (Node.js) ---
 FROM node:18-slim AS frontend
 WORKDIR /frontend
-
-# העתקת כל הפרויקט כדי ש-Tailwind יוכל לסרוק את קבצי ה-HTML וה-Python
-COPY . .
-
-WORKDIR /frontend/statuspage/project-static
+# העתקת קבצי ניהול חבילות והתקנה
+COPY statuspage/project-static/package.json statuspage/project-static/yarn.lock ./
 RUN yarn install
+# העתקת העיצוב וקימפול
+COPY statuspage/project-static/ ./
 RUN yarn bundle || true
 
 # --- שלב 2: פייתון (Production) ---
@@ -25,10 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt rq-scheduler
 # העתקת כל הקוד
 COPY . .
 # העתקת העיצוב המוכן משלב 1 ישר לתיקייה הנכונה
-COPY --from=frontend /frontend/statuspage/project-static/dist/ /app/statuspage/project-static/dist/
-
-# איסוף קבצים סטטיים ל-WhiteNoise
-RUN python statuspage/manage.py collectstatic --noinput
+COPY --from=frontend /frontend/dist/ /app/statuspage/project-static/dist/
 
 # הפקודה שמניעה את הכל
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "statuspage", "statuspage.wsgi:application"]
