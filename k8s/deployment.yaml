@@ -1,5 +1,5 @@
 # ==============================================================================
-# תצורת פריסה (Deployment) - מותאם למבנה תיקיות של תת-תיקייה
+# תצורת פריסה (Deployment) - תיקון משתני סביבה לחיבור דאטה-בייס
 # ==============================================================================
 
 apiVersion: apps/v1
@@ -20,12 +20,11 @@ spec:
         - name: run-migrations
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:c04ae50d5f105bbe2e8675a4d7678ab3c48a5315
           imagePullPolicy: Always
-          # שינוי: הגדרת תיקיית העבודה בדיוק איפה ש-manage.py נמצא
           workingDir: /app/statuspage
           command: ["/bin/sh", "-c"]
           args:
             - |
-              # הרצת המיגרציות - כעת הפקודה תמצא את manage.py בתיקייה הנוכחית
+              # הרצת המיגרציות - הפקודה תמצא את manage.py בתיקייה הנוכחית
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -36,7 +35,13 @@ spec:
               value: "postgres"
             - name: REDIS_HOST
               value: "statuspage-redis-master.default.svc.cluster.local"
+            # הוספת POSTGRES_PASSWORD ל-Init Container (תיקון השגיאה fe_sendauth)
             - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: statuspage-app-secrets
+                  key: DB_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: statuspage-app-secrets
@@ -49,14 +54,13 @@ spec:
       - name: statuspage-container
         image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:c04ae50d5f105bbe2e8675a4d7678ab3c48a5315
         imagePullPolicy: Always
-        # שינוי: הגדרת תיקיית העבודה גם כאן
         workingDir: /app/statuspage
         ports:
           - containerPort: 8000
         command: ["/bin/sh", "-c"]
         args:
           - |
-            # הרצת השרת - gunicorn יחפש את התיקייה statuspage (שמכילה את wsgi.py) בתוך התיקייה הנוכחית
+            # הרצת השרת - gunicorn יחפש את התיקייה statuspage בתוך התיקייה הנוכחית
             gunicorn --bind 0.0.0.0:8000 statuspage.wsgi:application
         env:
           - name: DB_HOST
