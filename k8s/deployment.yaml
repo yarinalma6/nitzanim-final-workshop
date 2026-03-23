@@ -1,5 +1,5 @@
 # ==============================================================================
-# תצורת פריסה (Deployment) - חזרה לגרסה היציבה
+# תצורת פריסה (Deployment) - מותאם למבנה תיקיות של תת-תיקייה
 # ==============================================================================
 
 apiVersion: apps/v1
@@ -18,13 +18,14 @@ spec:
     spec:
       initContainers:
         - name: run-migrations
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:ccdefee60825f58889d09e2a77848e8ef2d8852a
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           imagePullPolicy: Always
+          # שינוי: הגדרת תיקיית העבודה בדיוק איפה ש-manage.py נמצא
           workingDir: /app/statuspage
           command: ["/bin/sh", "-c"]
           args:
             - |
-              python -m pip install --target . rq-scheduler --no-cache-dir
+              # הרצת המיגרציות - כעת הפקודה תמצא את manage.py בתיקייה הנוכחית
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -40,26 +41,22 @@ spec:
                 secretKeyRef:
                   name: statuspage-app-secrets
                   key: DB_PASSWORD
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: statuspage-app-secrets
-                  key: DB_PASSWORD
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets
 
       containers:
       - name: statuspage-container
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:ccdefee60825f58889d09e2a77848e8ef2d8852a
+        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
         imagePullPolicy: Always
+        # שינוי: הגדרת תיקיית העבודה גם כאן
         workingDir: /app/statuspage
         ports:
           - containerPort: 8000
         command: ["/bin/sh", "-c"]
         args:
           - |
-            python -m pip install --target . rq-scheduler --no-cache-dir
+            # הרצת השרת - gunicorn יחפש את התיקייה statuspage (שמכילה את wsgi.py) בתוך התיקייה הנוכחית
             gunicorn --bind 0.0.0.0:8000 statuspage.wsgi:application
         env:
           - name: DB_HOST
