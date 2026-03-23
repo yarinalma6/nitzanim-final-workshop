@@ -4,13 +4,11 @@
   "main": "dist/statuspage.js",
   "license": "Apache-2.0",
   "private": true,
+
   "scripts": {
-    "build": "yarn build:css && yarn build:js",
-    "build:css": "tailwindcss -i ./styles/statuspage.scss -o ./dist/statuspage.css --postcss",
-    "build:js": "esbuild src/index.ts --bundle --minify --sourcemap --outfile=dist/statuspage-alpine.js",
-    "dev": "concurrently \"yarn dev:css\" \"yarn dev:js\"",
-    "dev:css": "tailwindcss -i ./styles/statuspage.scss -o ./dist/statuspage.css --postcss --watch",
-    "dev:js": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/statuspage-alpine.js --watch"
+    "bundle": "node bundle.js",
+    "build": "yarn bundle",
+    "dev": "yarn bundle --watch"
   },
   "dependencies": {
     "@mdi/font": "^7.0.96",
