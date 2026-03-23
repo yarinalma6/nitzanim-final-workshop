@@ -1,13 +1,11 @@
 # .github/workflows/ci.yml
-name: CI/CD Pipeline # The name of the workflow
+name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 permissions:
   id-token: write
-  contents: write
+  contents: read # שיניתי ל-read כי אנחנו כבר לא כותבים לגיט
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -15,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials via OIDC
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
@@ -25,13 +23,12 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build and Push to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: yarin-noa-project
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Add Docker caching to significantly speed up CI builds
           docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest || true
           
           docker build \
@@ -41,21 +38,5 @@ jobs:
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
             -f status-page/Dockerfile status-page
           
-          # דוחף את שתי הגרסאות ל-ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-      - name: Update image tag in deployment
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          sed -i "s|yarin-noa-project:.*|yarin-noa-project:$IMAGE_TAG|g" k8s/deployment.yaml
-
-      - name: Commit and push updated deployment
-        run: |
-          git config user.email "ci-bot@github.com"
-          git config user.name "GitHub CI"
-          git add k8s/deployment.yaml
-          # השינוי: בדיקה האם יש שינויים לפני הקומיט כדי למנוע קריסה
-          git diff --quiet && git diff --staged --quiet || git commit -m "ci: update image tag to ${{ github.sha }}"
-          git push

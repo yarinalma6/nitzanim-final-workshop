@@ -18,7 +18,7 @@ spec:
     spec:
       initContainers:
         - name: run-migrations
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:c04ae50d5f105bbe2e8675a4d7678ab3c48a5315
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
           imagePullPolicy: Always
           workingDir: /app/statuspage
           command: ["/bin/sh", "-c"]
@@ -52,7 +52,7 @@ spec:
 
       containers:
       - name: statuspage-container
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:c04ae50d5f105bbe2e8675a4d7678ab3c48a5315
+        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
         imagePullPolicy: Always
         workingDir: /app/statuspage
         ports:
