@@ -2,9 +2,10 @@
 FROM node:18-slim AS frontend
 WORKDIR /app
 COPY . .
+# -- קוד חדש ומתוקן --
 WORKDIR /app/statuspage/project-static
 RUN yarn install
-RUN yarn bundle || true
+RUN yarn build
 
 # --- שלב 2: סביבת הפרודקשן (Python) ---
 FROM python:3.10-slim
