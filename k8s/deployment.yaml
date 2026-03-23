@@ -1,11 +1,8 @@
-# ==============================================================================
-# תצורת פריסה (Deployment) - גרסה סופית עם תיקון קבצים סטטיים
-# ==============================================================================
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: status-page
+  namespace: statuspage # וודא שזה ה-Namespace הנכון
 spec:
   replicas: 1
   selector:
@@ -18,14 +15,12 @@ spec:
     spec:
       initContainers:
         - name: run-migrations
-          # נעול על latest כדי למנוע קונפליקטים עם ה-CI
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
           imagePullPolicy: Always
           workingDir: /app/statuspage
           command: ["/bin/sh", "-c"]
           args:
             - |
-              # הרצת המיגרציות - הפקודה תמצא את manage.py בתיקייה הנוכחית
               python manage.py migrate --noinput
           env:
             - name: DB_HOST
@@ -41,7 +36,49 @@ spec:
                 secretKeyRef:
                   name: statuspage-app-secrets
                   key: DB_PASSWORD
-            - name: POSTGRES_PASSWORD
+          envFrom:
+            - secretRef:
+                name: statuspage-app-secrets
+
+      containers:
+        - name: statuspage-container
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
+          imagePullPolicy: Always
+          workingDir: /app/statuspage
+          ports:
+            - containerPort: 8000
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              # איסוף קבצים סטטיים לפני עליית השרת
+              python manage.py collectstatic --noinput
+              # הרצה עם 3 וורקרים לביצועים ויציבות
+              gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application
+
+          readinessProbe:
+            httpGet:
+              path: /dashboard/login/
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /dashboard/login/
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          # כאן היה התיקון - ה-env חייב להיות בתוך ה-container
+          env:
+            - name: DB_HOST
+              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
+            - name: DB_NAME
+              value: "statuspage"
+            - name: DB_USER
+              value: "postgres"
+            - name: REDIS_HOST
+              value: "statuspage-redis-master.default.svc.cluster.local"
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: statuspage-app-secrets
@@ -49,41 +86,3 @@ spec:
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets
-
-      containers:
-      - name: statuspage-container
-        # נעול על latest
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
-        imagePullPolicy: Always
-        workingDir: /app/statuspage
-        ports:
-          - containerPort: 8000
-        command: ["/bin/sh", "-c"]
-        args:
-          - |
-            # איסוף קבצים סטטיים (תיקון לעיצוב האתר)
-            python manage.py collectstatic --noinput
-            # הרצת השרת - gunicorn יחפש את התיקייה statuspage בתוך התיקייה הנוכחית
-            gunicorn --bind 0.0.0.0:8000 statuspage.wsgi:application
-        env:
-          - name: DB_HOST
-            value: "statuspage-postgres-postgresql.default.svc.cluster.local"
-          - name: DB_NAME
-            value: "statuspage"
-          - name: DB_USER
-            value: "postgres"
-          - name: REDIS_HOST
-            value: "statuspage-redis-master.default.svc.cluster.local"
-          - name: DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: statuspage-app-secrets
-                key: DB_PASSWORD
-          - name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: statuspage-app-secrets
-                key: DB_PASSWORD
-        envFrom:
-          - secretRef:
-              name: statuspage-app-secrets
