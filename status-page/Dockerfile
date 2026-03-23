@@ -15,7 +15,10 @@ RUN apt-get update && apt-get install -y build-essential libpq-dev libpq5 && rm 
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt rq-scheduler
+RUN pip install --no-cache-dir -r requirements.txt
+
+# הפתרון המקצועי: קיבוע גרסאות שעובדות בהרמוניה כדי למנוע ImportError
+RUN pip install --no-cache-dir rq==1.11.1 rq-scheduler==0.11.0
 
 COPY --from=frontend /app /app
 RUN python manage.py collectstatic --no-input || true
