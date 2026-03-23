@@ -18,7 +18,7 @@ spec:
     spec:
       initContainers:
         - name: run-migrations
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
           imagePullPolicy: Always
           # שינוי: הגדרת תיקיית העבודה בדיוק איפה ש-manage.py נמצא
           workingDir: /app/statuspage
