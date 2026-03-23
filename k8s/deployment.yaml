@@ -47,7 +47,7 @@ spec:
 
       containers:
       - name: statuspage-container
-        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
+        image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
         imagePullPolicy: Always
         # שינוי: הגדרת תיקיית העבודה גם כאן
         workingDir: /app/statuspage
