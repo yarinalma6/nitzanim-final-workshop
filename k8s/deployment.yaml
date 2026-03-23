@@ -15,74 +15,41 @@ spec:
     spec:
       initContainers:
         - name: run-migrations
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
-          imagePullPolicy: Always
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           workingDir: /app/statuspage
-          command: ["/bin/sh", "-c"]
+          command: [ "/bin/sh", "-c" ]
           args:
             - |
               python manage.py migrate --noinput
-          env:
-            - name: DB_HOST
-              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
-            - name: DB_NAME
-              value: "statuspage"
-            - name: DB_USER
-              value: "postgres"
-            - name: REDIS_HOST
-              value: "statuspage-redis-master.default.svc.cluster.local"
-            - name: DB_PASSWORD
+          env: # <--- וודא שההזחה כאן מדויקת (מתחת ל-args)
+            - name: POSTGRES_PASSWORD # השם שהקוד מחפש
               valueFrom:
                 secretKeyRef:
                   name: statuspage-app-secrets
-                  key: DB_PASSWORD
+                  key: DB_PASSWORD # המפתח בתוך ה-Secret שלך
+            - name: DB_HOST
+              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets
 
       containers:
         - name: statuspage-container
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
-          imagePullPolicy: Always
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-no-project:latest
           workingDir: /app/statuspage
-          ports:
-            - containerPort: 8000
           command: [ "/bin/sh", "-c" ]
           args:
             - |
-              # איסוף קבצים סטטיים לפני עליית השרת
               python manage.py collectstatic --noinput
-              # הרצה עם 3 וורקרים לביצועים ויציבות
               gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application
-
-          readinessProbe:
-            httpGet:
-              path: /dashboard/login/
-              port: 8000
-            initialDelaySeconds: 15
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /dashboard/login/
-              port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-
-          # כאן היה התיקון - ה-env חייב להיות בתוך ה-container
-          env:
-            - name: DB_HOST
-              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
-            - name: DB_NAME
-              value: "statuspage"
-            - name: DB_USER
-              value: "postgres"
-            - name: REDIS_HOST
-              value: "statuspage-redis-master.default.svc.cluster.local"
-            - name: DB_PASSWORD
+          env: # <--- כאן הייתה הטעות הקודמת, זה חייב להיות בתוך ה-container!
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: statuspage-app-secrets
                   key: DB_PASSWORD
+            - name: DB_HOST
+              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets

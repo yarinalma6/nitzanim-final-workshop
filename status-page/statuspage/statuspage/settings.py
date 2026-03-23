@@ -253,12 +253,11 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static') # שימוש ב-os.path.join בטוח יותר
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = f'/{BASE_PATH}static/'
 
 # מאפשר ל-WhiteNoise לנהל את הקבצים ביעילות (דחיסה וקאשינג)
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'project-static', 'dist'),
     os.path.join(BASE_DIR, 'project-static', 'img'),
