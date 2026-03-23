@@ -27,5 +27,8 @@ COPY . .
 # העתקת העיצוב המוכן משלב 1 ישר לתיקייה הנכונה
 COPY --from=frontend /frontend/statuspage/project-static/dist/ /app/statuspage/project-static/dist/
 
+# איסוף קבצים סטטיים ל-WhiteNoise
+RUN python statuspage/manage.py collectstatic --noinput
+
 # הפקודה שמניעה את הכל
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "statuspage", "statuspage.wsgi:application"]
