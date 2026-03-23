@@ -1,30 +1,23 @@
-# --- שלב 1: קימפול העיצוב (Node.js) ---
+# --- שלב 1: קימפול הפרונטאנד (Node.js) ---
 FROM node:18-slim AS frontend
-WORKDIR /frontend
-# העתקת קבצי ניהול חבילות והתקנה
-COPY statuspage/project-static/package.json statuspage/project-static/yarn.lock ./
+WORKDIR /app
+COPY . .
+WORKDIR /app/statuspage/project-static
 RUN yarn install
-# העתקת העיצוב וקימפול
-COPY statuspage/project-static/ ./
 RUN yarn bundle || true
 
-# --- שלב 2: פייתון (Production) ---
+# --- שלב 2: סביבת הפרודקשן (Python) ---
 FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# התקנת תלויות מערכת
 RUN apt-get update && apt-get install -y build-essential libpq-dev libpq5 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY requirements.txt .
-# התקנת כל הדרישות + rq-scheduler מראש כדי שלא יהיו שגיאות
 RUN pip install --no-cache-dir -r requirements.txt rq-scheduler
 
-# העתקת כל הקוד
-COPY . .
-# העתקת העיצוב המוכן משלב 1 ישר לתיקייה הנכונה
-COPY --from=frontend /frontend/dist/ /app/statuspage/project-static/dist/
+COPY --from=frontend /app /app
+RUN python manage.py collectstatic --no-input || true
 
-# הפקודה שמניעה את הכל
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "statuspage", "statuspage.wsgi:application"]
