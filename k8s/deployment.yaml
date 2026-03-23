@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: status-page
-  namespace: statuspage # וודא שזה ה-Namespace הנכון
+  namespace: statuspage
 spec:
   replicas: 1
   selector:
@@ -16,33 +16,13 @@ spec:
       initContainers:
         - name: run-migrations
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
+          imagePullPolicy: Always
           workingDir: /app/statuspage
           command: [ "/bin/sh", "-c" ]
           args:
             - |
               python manage.py migrate --noinput
-          env: # <--- וודא שההזחה כאן מדויקת (מתחת ל-args)
-            - name: POSTGRES_PASSWORD # השם שהקוד מחפש
-              valueFrom:
-                secretKeyRef:
-                  name: statuspage-app-secrets
-                  key: DB_PASSWORD # המפתח בתוך ה-Secret שלך
-            - name: DB_HOST
-              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
-          envFrom:
-            - secretRef:
-                name: statuspage-app-secrets
-
-      containers:
-        - name: statuspage-container
-          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
-          workingDir: /app/statuspage
-          command: [ "/bin/sh", "-c" ]
-          args:
-            - |
-              python manage.py collectstatic --noinput
-              gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application
-          env: # <--- כאן הייתה הטעות הקודמת, זה חייב להיות בתוך ה-container!
+          env:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -50,6 +30,51 @@ spec:
                   key: DB_PASSWORD
             - name: DB_HOST
               value: "statuspage-postgres-postgresql.default.svc.cluster.local"
+            # התיקון הקריטי ל-Redis:
+            - name: REDIS_HOST
+              value: "statuspage-redis-master.default.svc.cluster.local"
+          envFrom:
+            - secretRef:
+                name: statuspage-app-secrets
+
+      containers:
+        - name: statuspage-container
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
+          imagePullPolicy: Always
+          workingDir: /app/statuspage
+          ports:
+            - containerPort: 8000
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              python manage.py collectstatic --noinput
+              gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application
+
+          # חובה כדי שה-ALB לא יפיל את האתר:
+          readinessProbe:
+            httpGet:
+              path: /dashboard/login/
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /dashboard/login/
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: statuspage-app-secrets
+                  key: DB_PASSWORD
+            - name: DB_HOST
+              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
+            # התיקון הקריטי ל-Redis:
+            - name: REDIS_HOST
+              value: "statuspage-redis-master.default.svc.cluster.local"
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets
