@@ -15,7 +15,7 @@ spec:
     spec:
       initContainers:
         - name: run-migrations
-          image: 992382545251.dkr.res.us-east-1.amazonaws.com/yarin-noa-project:latest
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
           imagePullPolicy: Always
           workingDir: /app/statuspage
           command: ["/bin/sh", "-c"]
