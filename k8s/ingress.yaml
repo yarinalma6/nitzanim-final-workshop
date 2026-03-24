@@ -2,22 +2,24 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: status-page-ingress
+  namespace: statuspage
   annotations:
     # אומר ל-AWS: "תיצור ALB שחשוף לאינטרנט"
     alb.ingress.kubernetes.io/scheme: internet-facing
     # אומר ל-AWS: "תעביר תנועה ישירות ל-IP של הפודים"
     alb.ingress.kubernetes.io/target-type: ip
     # --- תוספות עבור HTTPS ---
-    # 1. הגדרת הפורטים שה-ALB יאזין להם
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-    # 2. ה-ARN של התעודה שיצרת ב-ACM
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:992382545251:certificate/7cfd330a-ae94-4daa-a5d0-8f1f27145e04
-    # 3. הפניה אוטומטית מ-HTTP ל-HTTPS
     alb.ingress.kubernetes.io/ssl-redirect: '443'
-    # --- השורה שתגרום לאתר לעלות ---
-    # אומר ל-AWS: "גם אם קיבלת הפניה (302), הפוד בריא ותשלח אליו אנשים"
+
+    # --- הגדרות Health Check עבור ה-ALB ב-AWS ---
+    # אנו מוודאים שה-ALB בודק בדיוק את מה שהפוד בודק
+    alb.ingress.kubernetes.io/healthcheck-path: /dashboard/login/
+    alb.ingress.kubernetes.io/healthcheck-port: '8000'
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
     alb.ingress.kubernetes.io/success-codes: "200-399"
-    # -------------------------------
+    # --------------------------------------------
 spec:
   ingressClassName: alb
   rules:
@@ -28,8 +30,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            # השם המדויק של הסרביס שלנו ממשימה 3.3.3
             name: status-page-service
             port:
-              # הפורט של הסרביס (לא של הקונטיינר)
               number: 80
