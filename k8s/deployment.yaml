@@ -18,7 +18,7 @@ spec:
           image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
           imagePullPolicy: Always
           workingDir: /app/statuspage
-          command: [ "/bin/sh", "-c" ]
+          command: ["/bin/sh", "-c"]
           args:
             - "python manage.py migrate --noinput"
           env:
@@ -42,9 +42,10 @@ spec:
           workingDir: /app/statuspage
           ports:
             - containerPort: 8000
-          command: [ "/bin/sh", "-c" ]
+          command: ["/bin/sh", "-c"]
+          # הוספנו מחדש collectstatic רק כדי לוודא שהתיקייה קיימת בזמן ריצה
           args:
-            - "gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application"
+            - "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application"
 
           readinessProbe:
             httpGet:

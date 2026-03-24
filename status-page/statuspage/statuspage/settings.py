@@ -45,7 +45,7 @@ ADMINS = getattr(configuration, 'ADMINS', [])
 AUTH_PASSWORD_VALIDATORS = getattr(configuration, 'AUTH_PASSWORD_VALIDATORS', [])
 BASE_PATH = getattr(configuration, 'BASE_PATH', '')
 if BASE_PATH:
-    BASE_PATH = BASE_PATH.strip('/') + '/'  # Enforce trailing slash only
+    BASE_PATH = BASE_PATH.strip('/') + '/'
 CORS_ORIGIN_ALLOW_ALL = getattr(configuration, 'CORS_ORIGIN_ALLOW_ALL', False)
 CORS_ORIGIN_REGEX_WHITELIST = getattr(configuration, 'CORS_ORIGIN_REGEX_WHITELIST', [])
 CORS_ORIGIN_WHITELIST = getattr(configuration, 'CORS_ORIGIN_WHITELIST', [])
@@ -56,12 +56,10 @@ DATETIME_FORMAT = getattr(configuration, 'DATETIME_FORMAT', 'N j, Y g:i a')
 DEBUG = getattr(configuration, 'DEBUG', False)
 DEVELOPER = getattr(configuration, 'DEVELOPER', False)
 EMAIL = getattr(configuration, 'EMAIL', {})
-# EXEMPT_VIEW_PERMISSIONS = getattr(configuration, 'EXEMPT_VIEW_PERMISSIONS', [])
 EXEMPT_VIEW_PERMISSIONS = []
 FIELD_CHOICES = getattr(configuration, 'FIELD_CHOICES', {})
 INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
 LOGGING = getattr(configuration, 'LOGGING', {})
-# LOGIN_REQUIRED = getattr(configuration, 'LOGIN_REQUIRED', False)
 LOGIN_REQUIRED = True
 LOGIN_TIMEOUT = getattr(configuration, 'LOGIN_TIMEOUT', None)
 MEDIA_ROOT = getattr(configuration, 'MEDIA_ROOT', os.path.join(BASE_DIR, 'media')).rstrip('/')
@@ -92,17 +90,12 @@ DATABASES = {
 }
 
 if 'tasks' not in REDIS:
-    raise ImproperlyConfigured(
-        "REDIS section in configuration.py is missing the 'tasks' subsection."
-    )
+    raise ImproperlyConfigured("REDIS section in configuration.py is missing the 'tasks' subsection.")
 TASKS_REDIS = REDIS['tasks']
 TASKS_REDIS_HOST = TASKS_REDIS.get('HOST', 'localhost')
 TASKS_REDIS_PORT = TASKS_REDIS.get('PORT', 6379)
 TASKS_REDIS_SENTINELS = TASKS_REDIS.get('SENTINELS', [])
-TASKS_REDIS_USING_SENTINEL = all([
-    isinstance(TASKS_REDIS_SENTINELS, (list, tuple)),
-    len(TASKS_REDIS_SENTINELS) > 0
-])
+TASKS_REDIS_USING_SENTINEL = all([isinstance(TASKS_REDIS_SENTINELS, (list, tuple)), len(TASKS_REDIS_SENTINELS) > 0])
 TASKS_REDIS_SENTINEL_SERVICE = TASKS_REDIS.get('SENTINEL_SERVICE', 'default')
 TASKS_REDIS_SENTINEL_TIMEOUT = TASKS_REDIS.get('SENTINEL_TIMEOUT', 10)
 TASKS_REDIS_PASSWORD = TASKS_REDIS.get('PASSWORD', '')
@@ -110,11 +103,8 @@ TASKS_REDIS_DATABASE = TASKS_REDIS.get('DATABASE', 0)
 TASKS_REDIS_SSL = TASKS_REDIS.get('SSL', False)
 TASKS_REDIS_SKIP_TLS_VERIFY = TASKS_REDIS.get('INSECURE_SKIP_TLS_VERIFY', False)
 
-# Caching
 if 'caching' not in REDIS:
-    raise ImproperlyConfigured(
-        "REDIS section in configuration.py is missing caching subsection."
-    )
+    raise ImproperlyConfigured("REDIS section in configuration.py is missing caching subsection.")
 CACHING_REDIS_HOST = REDIS['caching'].get('HOST', 'localhost')
 CACHING_REDIS_PORT = REDIS['caching'].get('PORT', 6379)
 CACHING_REDIS_DATABASE = REDIS['caching'].get('DATABASE', 0)
@@ -144,7 +134,6 @@ if CACHING_REDIS_SKIP_TLS_VERIFY:
     CACHES['default']['OPTIONS']['CONNECTION_POOL_KWARGS']['ssl_cert_reqs'] = False
 
 if LOGIN_TIMEOUT is not None:
-    # Django default is 1209600 seconds (14 days)
     SESSION_COOKIE_AGE = LOGIN_TIMEOUT
 
 EMAIL_HOST = EMAIL.get('SERVER')
@@ -169,9 +158,9 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic', # הוספה כדי לעזור בפיתוח
     'django.contrib.staticfiles',
     'rest_framework',
-    'django_browser_reload',
     'django_tables2',
     'components',
     'extras',
@@ -192,7 +181,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # חובה מיקום שני!
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -200,7 +189,6 @@ MIDDLEWARE = [
     'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_browser_reload.middleware.BrowserReloadMiddleware',
     'statuspage.middleware.APIVersionMiddleware',
     'statuspage.middleware.ObjectChangeMiddleware',
     'statuspage.middleware.DynamicConfigMiddleware',
@@ -235,10 +223,6 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 OTP_ADMIN_HIDE_SENSITIVE_DATA = True
-
-# Internationalization
-# https://docs.djangoproject.com/en/4.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 USE_I18N = True
 USE_L10N = False
@@ -250,34 +234,24 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-# Static files (CSS, JavaScript, Images)
+# --- תיקון קבצים סטטיים ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = f'/{BASE_PATH}static/'
+STATIC_URL = '/static/' # הורדנו את ה-BASE_PATH כדי לפשט
 
-# הגדרה מתאימה ל-Django 4.1
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# הגדרה פשוטה ואמינה יותר ללא Manifest (מונע שגיאות 500 אם קובץ חסר)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'project-static', 'dist'),
     os.path.join(BASE_DIR, 'project-static', 'img'),
-    ('docs', os.path.join(BASE_DIR, 'project-static', 'docs')),
 )
 
-# Media
-MEDIA_URL = '/{}media/'.format(BASE_PATH)
-
-# Disable default limit of 1000 fields per request. Needed for bulk deletion of objects. (Added in Django 1.10.)
+MEDIA_URL = '/media/'
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 FILTERS_NULL_CHOICE_LABEL = 'None'
 FILTERS_NULL_CHOICE_VALUE = 'null'
-
-REST_FRAMEWORK_VERSION = '.'.join(VERSION.split('-')[0].split('.')[:2])  # Use major.minor as API version
+REST_FRAMEWORK_VERSION = '.'.join(VERSION.split('-')[0].split('.')[:2])
 REST_FRAMEWORK = {
     'ALLOWED_VERSIONS': [REST_FRAMEWORK_VERSION],
     'COERCE_DECIMAL_TO_STRING': False,
@@ -305,14 +279,14 @@ REST_FRAMEWORK = {
     'DEFAULT_VERSION': REST_FRAMEWORK_VERSION,
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.AcceptHeaderVersioning',
     'SCHEMA_COERCE_METHOD_NAMES': {
-        # Default mappings
         'retrieve': 'read',
         'destroy': 'delete',
-        # Custom operations
         'bulk_destroy': 'bulk_delete',
     },
     'VIEW_NAME_FUNCTION': 'utilities.api.get_view_name',
 }
+
+# (שאר הקובץ נשאר זהה...)
 
 SWAGGER_SETTINGS = {
     'DEFAULT_AUTO_SCHEMA_CLASS': 'utilities.custom_inspectors.StatusPageSwaggerAutoSchema',
