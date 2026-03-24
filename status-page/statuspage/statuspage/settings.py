@@ -256,8 +256,16 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = f'/{BASE_PATH}static/'
 
-# מאפשר ל-WhiteNoise לנהל את הקבצים ביעילות (דחיסה וקאשינג)
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+# מאפשר ל-WhiteNoise לנהל את הקבצים ביעילות (דחיסה וקאשינג) מעודכן לגרסאות חדשות
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'project-static', 'dist'),
     os.path.join(BASE_DIR, 'project-static', 'img'),

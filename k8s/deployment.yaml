@@ -46,8 +46,12 @@ spec:
             - containerPort: 8000
           command: [ "/bin/sh", "-c" ]
           args:
-            - |
-              gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application
+            - gunicorn
+            - --bind
+            - 0.0.0.0:8000
+            - --workers
+            - "3"
+            - statuspage.wsgi:application
 
           # חובה כדי שה-ALB לא יפיל את האתר:
           readinessProbe:
