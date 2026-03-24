@@ -36,18 +36,11 @@ PLUGINS_CONFIG = getattr(configuration, 'PLUGINS_CONFIG', {})
 INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
 DEBUG = getattr(configuration, 'DEBUG', False)
 
-DATE_FORMAT = getattr(configuration, 'DATE_FORMAT', 'N j, Y')
-DATETIME_FORMAT = getattr(configuration, 'DATETIME_FORMAT', 'N j, Y g:i a')
-SHORT_DATE_FORMAT = getattr(configuration, 'SHORT_DATE_FORMAT', 'Y-m-d')
-SHORT_DATETIME_FORMAT = getattr(configuration, 'SHORT_DATETIME_FORMAT', 'Y-m-d H:i')
-
 BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
 if BASE_PATH:
     BASE_PATH += '/'
 
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
-QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
-WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
 
 for param in PARAMS:
     if hasattr(configuration, param.name):
@@ -86,14 +79,14 @@ RQ_QUEUES = {
     'low': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
 }
 
-# --- INSTALLED APPS (התיקון כאן!) ---
+# --- APPS & MIDDLEWARE ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic',
+    'whitenoise.runserver_nostatic', # מיקום קריטי
     'django.contrib.staticfiles',
     'rest_framework',
     'django_tables2',
@@ -111,7 +104,7 @@ INSTALLED_APPS = [
     'django_otp',
     'django_otp.plugins.otp_static',
     'django_otp.plugins.otp_totp',
-    'otp_yubikey', # <-- זה התיקון לשגיאה שלך
+    'otp_yubikey',
 ]
 
 for plugin in PLUGINS:
@@ -119,7 +112,7 @@ for plugin in PLUGINS:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # חייב להיות כאן להגשת CSS/JS
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -155,7 +148,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'statuspage.wsgi.application'
+
+# --- הגדרות STATIC סופיות ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = f'/{BASE_PATH}static/'
+STATIC_URL = '/static/'
+# שימוש ב-Storage פשוט יותר למניעת שגיאות MIME בקלאסטר
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
