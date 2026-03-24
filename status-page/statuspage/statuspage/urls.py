@@ -77,8 +77,8 @@ _patterns = [
     path('__reload__/', include('django_browser_reload.urls')),
 ]
 
-# --- התיקון: מונע שגיאת ניתוב וסלאשים כפולים ---
-base_path = settings.BASE_PATH.strip('/')
+# --- תיקון BASE_PATH למניעת סלאשים כפולים ---
+base_path = getattr(settings, 'BASE_PATH', '').strip('/')
 if base_path:
     urlpatterns = [path(f'{base_path}/', include(_patterns))]
 else:

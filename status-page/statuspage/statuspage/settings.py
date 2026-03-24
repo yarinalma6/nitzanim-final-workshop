@@ -18,6 +18,7 @@ if sys.version_info < (3, 10):
         f"Status-Page requires Python 3.10 or later. (Currently installed: Python {platform.python_version()})"
     )
 
+
 config_path = os.getenv('STATUS_PAGE_CONFIGURATION', 'statuspage.configuration')
 try:
     configuration = importlib.import_module(config_path)
@@ -34,7 +35,7 @@ for parameter in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'REDIS', 'SITE_URL'
     if not hasattr(configuration, parameter):
         raise ImproperlyConfigured(f"Required parameter {parameter} is missing from configuration.")
 
-# --- תיקון אבטחה/ALB: אישור גישה מכל מקום (רצוי ל-ALB ב-AWS) ---
+# --- תיקון: ALLOWED_HOSTS ו-BASE_PATH ---
 ALLOWED_HOSTS = ['*']
 DATABASE = getattr(configuration, 'DATABASE')
 REDIS = getattr(configuration, 'REDIS')
@@ -44,7 +45,7 @@ SITE_URL = getattr(configuration, 'SITE_URL')
 ADMINS = getattr(configuration, 'ADMINS', [])
 AUTH_PASSWORD_VALIDATORS = getattr(configuration, 'AUTH_PASSWORD_VALIDATORS', [])
 
-# --- תיקון BASE_PATH: ניקוי למניעת // בניתוב ---
+# ניקוי BASE_PATH כדי למנוע סלאשים כפולים בתחילת הכתובת
 BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
 if BASE_PATH:
     BASE_PATH += '/'
@@ -54,7 +55,7 @@ CORS_ORIGIN_REGEX_WHITELIST = getattr(configuration, 'CORS_ORIGIN_REGEX_WHITELIS
 CORS_ORIGIN_WHITELIST = getattr(configuration, 'CORS_ORIGIN_WHITELIST', [])
 CSRF_COOKIE_NAME = getattr(configuration, 'CSRF_COOKIE_NAME', 'csrftoken')
 
-# --- הוספת דומיין לחריגים כדי למנוע שגיאות התחברות (403) ב-ALB ---
+# הוספת הדומיין לרשימת המהימנים עבור ה-ALB
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
 
 DATE_FORMAT = getattr(configuration, 'DATE_FORMAT', 'N j, Y')
@@ -71,7 +72,7 @@ LOGGING = getattr(configuration, 'LOGGING', {})
 LOGIN_REQUIRED = True
 LOGIN_TIMEOUT = getattr(configuration, 'LOGIN_TIMEOUT', None)
 
-# --- התיקון שהפיל את המייגרציה: הוספת גרשיים סביב 'media' ---
+# --- התיקון הקריטי: הוספת גרשיים סביב 'media' ---
 MEDIA_ROOT = getattr(configuration, 'MEDIA_ROOT', os.path.join(BASE_DIR, 'media')).rstrip('/')
 
 PLUGINS = getattr(configuration, 'PLUGINS', [])
@@ -178,7 +179,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic',  # הוספה כדי לעזור ל-WhiteNoise
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'django_browser_reload',
@@ -202,7 +203,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # חובה מיקום שני כדי שיגיש קבצים
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
