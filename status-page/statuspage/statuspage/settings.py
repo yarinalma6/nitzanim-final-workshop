@@ -40,21 +40,20 @@ DEBUG = getattr(configuration, 'DEBUG', False)
 QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
 WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
 
-# הגדרות אבטחה וחיבור
+# הגדרות אבטחה
 LOGIN_PERSISTENCE = getattr(configuration, 'LOGIN_PERSISTENCE', False)
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
 
-# טעינת פרמטרים נוספים מהקונפיגורציה
 for param in PARAMS:
     if hasattr(configuration, param.name):
         globals()[param.name] = getattr(configuration, param.name)
 
-# --- תיקון קריטי: הגדרת BASE_PATH שתמיד תהיה קיימת ---
-BASE_PATH = getattr(configuration, 'BASE_PATH', os.environ.get('BASE_PATH', '')).strip('/')
+# --- תיקון BASE_PATH ---
+BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
 if BASE_PATH:
     BASE_PATH += '/'
 else:
-    BASE_PATH = '' # מבטיח שהמשתנה קיים כסטרינג ריק למניעת AttributeError
+    BASE_PATH = ''
 
 # --- DATABASE & REDIS ---
 DATABASES = {
@@ -81,12 +80,6 @@ CACHES = {
             'PASSWORD': TASKS_REDIS_PASSWORD,
         }
     }
-}
-
-RQ_QUEUES = {
-    'high': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
-    'default': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
-    'low': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
 }
 
 # --- APPS & MIDDLEWARE ---
@@ -159,13 +152,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'statuspage.wsgi.application'
 
-# --- STATIC & MEDIA ---
+# --- תיקון קריטי לסטטיקס (הצבעים חוזרים כאן) ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
+
+# אומר לג'אנגו לחפש קבצים גם בתיקיית הפרויקט המקורית
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'project-static'),
+]
+
+# שימוש ב-Storage פשוט ואמין
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
