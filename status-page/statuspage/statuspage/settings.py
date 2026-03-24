@@ -36,10 +36,12 @@ PLUGINS_CONFIG = getattr(configuration, 'PLUGINS_CONFIG', {})
 INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
 DEBUG = getattr(configuration, 'DEBUG', False)
 
-BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
-if BASE_PATH:
-    BASE_PATH += '/'
+# --- QUEUE MAPPINGS (התיקון לשגיאה שלך) ---
+QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
+WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
 
+# הגדרות אבטחה וחיבור
+LOGIN_PERSISTENCE = getattr(configuration, 'LOGIN_PERSISTENCE', False)
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
 
 for param in PARAMS:
@@ -86,7 +88,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic', # מיקום קריטי
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'django_tables2',
@@ -112,7 +114,7 @@ for plugin in PLUGINS:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # חייב להיות כאן להגשת CSS/JS
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -125,7 +127,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'statuspage.urls'
-TEMPLATES_DIR = f'{BASE_DIR}/templates'
+TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -149,9 +151,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'statuspage.wsgi.application'
 
-# --- הגדרות STATIC סופיות ---
+# --- STATIC & MEDIA ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
-# שימוש ב-Storage פשוט יותר למניעת שגיאות MIME בקלאסטר
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+WHITENOISE_MANIFEST_STRICT = False
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
