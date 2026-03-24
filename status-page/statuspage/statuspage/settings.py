@@ -34,31 +34,36 @@ for parameter in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'REDIS', 'SITE_URL'
     if not hasattr(configuration, parameter):
         raise ImproperlyConfigured(f"Required parameter {parameter} is missing from configuration.")
 
-# --- תיקון: ALLOWED_HOSTS ו-BASE_PATH ---
+# --- הגדרות בסיס ---
 ALLOWED_HOSTS = ['*']
 DATABASE = getattr(configuration, 'DATABASE')
 REDIS = getattr(configuration, 'REDIS')
 SECRET_KEY = getattr(configuration, 'SECRET_KEY')
 SITE_URL = getattr(configuration, 'SITE_URL')
 
+# --- תיקון השגיאה: הוספת FIELD_CHOICES ופרמטרים חסרים ---
+FIELD_CHOICES = getattr(configuration, 'FIELD_CHOICES', {})
+INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
+LOGGING = getattr(configuration, 'LOGGING', {})
 ADMINS = getattr(configuration, 'ADMINS', [])
 AUTH_PASSWORD_VALIDATORS = getattr(configuration, 'AUTH_PASSWORD_VALIDATORS', [])
+
+# פורמטים של זמן (נדרש בגרסה החדשה)
+DATE_FORMAT = getattr(configuration, 'DATE_FORMAT', 'N j, Y')
+DATETIME_FORMAT = getattr(configuration, 'DATETIME_FORMAT', 'N j, Y g:i a')
+SHORT_DATE_FORMAT = getattr(configuration, 'SHORT_DATE_FORMAT', 'Y-m-d')
+SHORT_DATETIME_FORMAT = getattr(configuration, 'SHORT_DATETIME_FORMAT', 'Y-m-d H:i')
 
 # ניקוי BASE_PATH
 BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
 if BASE_PATH:
     BASE_PATH += '/'
 
-CORS_ORIGIN_ALLOW_ALL = getattr(configuration, 'CORS_ORIGIN_ALLOW_ALL', False)
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
-
 DEBUG = getattr(configuration, 'DEBUG', False)
-LOGIN_REQUIRED = True
 
-# --- הגדרות חדשות עבור הגרסה הרשמית (תיקון ה-500) ---
-QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {
-    'webhook': 'default',
-})
+# הגדרות WEBHOOKS ו-QUEUES
+QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
 WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
 
 for param in PARAMS:
@@ -120,7 +125,7 @@ RQ_QUEUES = {
     'low': RQ_PARAMS,
 }
 
-# --- המשך הגדרות סטנדרטיות ---
+# --- אפליקציות ו-Middleware ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -189,4 +194,3 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = f'/{BASE_PATH}static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-# (יתר ההגדרות נשמרות מהקובץ הקודם שלך)
