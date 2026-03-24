@@ -19,38 +19,33 @@ try:
 except ModuleNotFoundError:
     raise ImproperlyConfigured(f"Configuration module {config_path} not found.")
 
-# --- הגדרות חובה מהקונפיגורציה ---
 for parameter in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'REDIS', 'SITE_URL']:
     if not hasattr(configuration, parameter):
         raise ImproperlyConfigured(f"Required parameter {parameter} is missing.")
 
+# --- הגדרות בסיס ---
 ALLOWED_HOSTS = ['*']
 DATABASE = getattr(configuration, 'DATABASE')
 REDIS = getattr(configuration, 'REDIS')
 SECRET_KEY = getattr(configuration, 'SECRET_KEY')
 SITE_URL = getattr(configuration, 'SITE_URL')
 
-# --- תיקון השגיאה: PLUGINS והגדרות חסרות ---
 FIELD_CHOICES = getattr(configuration, 'FIELD_CHOICES', {})
 PLUGINS = getattr(configuration, 'PLUGINS', [])
 PLUGINS_CONFIG = getattr(configuration, 'PLUGINS_CONFIG', {})
 INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
 DEBUG = getattr(configuration, 'DEBUG', False)
 
-# הגדרות זמן ופורמטים
 DATE_FORMAT = getattr(configuration, 'DATE_FORMAT', 'N j, Y')
 DATETIME_FORMAT = getattr(configuration, 'DATETIME_FORMAT', 'N j, Y g:i a')
 SHORT_DATE_FORMAT = getattr(configuration, 'SHORT_DATE_FORMAT', 'Y-m-d')
 SHORT_DATETIME_FORMAT = getattr(configuration, 'SHORT_DATETIME_FORMAT', 'Y-m-d H:i')
 
-# נתיבים ו-URL
 BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
 if BASE_PATH:
     BASE_PATH += '/'
 
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
-
-# WEBHOOKS ו-QUEUES
 QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
 WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
 
@@ -58,7 +53,7 @@ for param in PARAMS:
     if hasattr(configuration, param.name):
         globals()[param.name] = getattr(configuration, param.name)
 
-# --- DATABASE ו-REDIS ---
+# --- DATABASE & REDIS ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -71,9 +66,9 @@ DATABASES = {
     },
 }
 
-TASKS_REDIS = REDIS.get('tasks', {})
-TASKS_REDIS_HOST = os.environ.get('REDIS_HOST', TASKS_REDIS.get('HOST', 'localhost'))
-TASKS_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', TASKS_REDIS.get('PASSWORD', ''))
+TASKS_REDIS_HOST = os.environ.get('REDIS_HOST', REDIS.get('tasks', {}).get('HOST', 'localhost'))
+TASKS_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', REDIS.get('tasks', {}).get('PASSWORD', ''))
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -91,7 +86,7 @@ RQ_QUEUES = {
     'low': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
 }
 
-# --- אפליקציות ו-Middleware ---
+# --- INSTALLED APPS (התיקון כאן!) ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -116,9 +111,9 @@ INSTALLED_APPS = [
     'django_otp',
     'django_otp.plugins.otp_static',
     'django_otp.plugins.otp_totp',
+    'otp_yubikey', # <-- זה התיקון לשגיאה שלך
 ]
 
-# הוספת הפלאגינים לרשימת האפליקציות
 for plugin in PLUGINS:
     INSTALLED_APPS.append(plugin)
 
