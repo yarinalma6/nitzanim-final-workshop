@@ -17,9 +17,14 @@ module "vpc" {
   }
 
   public_subnet_tags = {
-    "kubernetes.io/role/elb" = 1
+    "kubernetes.io/role/elb"                  = "1"
+    # חובה להוסיף את התג הזה (וודא ששם הקלאסטר נכון):
+    "kubernetes.io/cluster/yarin-noa-cluster" = "shared"
   }
+
   private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = 1
+    "kubernetes.io/role/internal-elb"         = "1"
+    # חובה להוסיף את התג הזה גם כאן:
+    "kubernetes.io/cluster/yarin-noa-cluster" = "shared"
   }
 }

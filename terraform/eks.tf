@@ -52,9 +52,9 @@ module "eks" {
   eks_managed_node_groups = {
     general = {
       instance_types = ["t3.medium"] # סוג מכונה יחסית זול אבל מספיק חזק
-      min_size     = 0
-      max_size     = 3
-      desired_size = 2 # כמה שרתים ירוצו ביום-יום
+      min_size     = 3
+      max_size     = 5
+      desired_size = 4 # כמה שרתים ירוצו ביום-יום
     }
   }
 
