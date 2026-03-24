@@ -97,7 +97,7 @@ DATABASES = {
     },
 }
 
-# --- לוגיקת REDIS מתוקנת (Explicit Format) ---
+# --- לוגיקת REDIS מתוקנת (עם Socket Timeouts לאבחון) ---
 TASKS_REDIS = REDIS.get('tasks', {})
 TASKS_REDIS_HOST = os.environ.get('REDIS_HOST', TASKS_REDIS.get('HOST', 'localhost'))
 TASKS_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', TASKS_REDIS.get('PASSWORD', ''))
@@ -118,6 +118,8 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'PASSWORD': CACHING_REDIS_PASSWORD,
+            'SOCKET_CONNECT_TIMEOUT': 10,  # זמן המתנה מקסימלי לחיבור
+            'SOCKET_TIMEOUT': 10,          # זמן המתנה מקסימלי לתגובה
         }
     }
 }
@@ -128,6 +130,7 @@ RQ_PARAMS = {
     'DB': TASKS_REDIS_DATABASE,
     'PASSWORD': TASKS_REDIS_PASSWORD,
     'DEFAULT_TIMEOUT': RQ_DEFAULT_TIMEOUT,
+    'SOCKET_TIMEOUT': 10,              # מונע מהוורקר "לקפוא" לנצח
 }
 
 RQ_QUEUES = {

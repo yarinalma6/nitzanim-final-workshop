@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: status-page-worker
+  namespace: statuspage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: statuspage-worker
+  template:
+    metadata:
+      labels:
+        app: statuspage-worker
+    spec:
+      containers:
+        - name: worker
+          image: 992382545251.dkr.ecr.us-east-1.amazonaws.com/yarin-noa-project:latest
+          imagePullPolicy: Always
+          workingDir: /app/statuspage
+          # --- הפקודה שמפעילה את מנוע הבדיקות ---
+          command: ["python", "manage.py", "rqworker", "high", "default", "low"]
+
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: statuspage-app-secrets
+                  key: DB_PASSWORD
+            - name: DB_HOST
+              value: "statuspage-postgres-postgresql.default.svc.cluster.local"
+            - name: REDIS_HOST
+              value: "statuspage-redis-master.default.svc.cluster.local"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: statuspage-app-secrets
+                  key: REDIS_PASSWORD
+          envFrom:
+            - secretRef:
+                name: statuspage-app-secrets
