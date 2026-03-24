@@ -46,6 +46,16 @@ spec:
           args:
             - "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application"
 
+          # --- הוספת הגבלת משאבים (Resources) ---
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          # --------------------------------------
+
           # --- Health Checks (Probes) ---
           readinessProbe:
             httpGet:
