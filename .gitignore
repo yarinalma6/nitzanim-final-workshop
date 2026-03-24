@@ -226,3 +226,7 @@ eksctl.zip
 eso.yaml
 policy.json
 trust.json
+
+# Allow frontend lib directory
+!status-page/statuspage/project-static/src/lib/
+!status-page/statuspage/project-static/src/lib/*

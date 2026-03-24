@@ -2,7 +2,6 @@
 FROM node:18-slim AS frontend
 WORKDIR /app
 COPY . .
-# -- קוד חדש ומתוקן --
 WORKDIR /app/statuspage/project-static
 RUN yarn install
 RUN yarn build
@@ -17,11 +16,16 @@ RUN apt-get update && apt-get install -y build-essential libpq-dev libpq5 && rm 
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# הפתרון המקצועי: קיבוע גרסאות שעובדות בהרמוניה כדי למנוע ImportError
 RUN pip install --no-cache-dir rq==1.11.1 rq-scheduler==0.11.0
 
+# העתקת כל הקבצים (כולל מה שנוצר בשלב ה-Frontend)
 COPY --from=frontend /app /app
-RUN python manage.py collectstatic --no-input || true
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "statuspage", "statuspage.wsgi:application"]
+# --- התיקון הקריטי: מעבר לתיקייה הנכונה והוספת משתני סביבה ---
+WORKDIR /app/statuspage
+
+# הורדנו את ה- || true ותיקנו ל- --noinput. משתני הסביבה מונעים קריסה של ג'אנגו.
+RUN SECRET_KEY="dummy" DB_HOST="localhost" POSTGRES_PASSWORD="dummy" python manage.py collectstatic --noinput
+
+# הפעלת Gunicorn (אין צורך ב-chdir כי אנחנו כבר בתיקייה הנכונה)
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "statuspage.wsgi:application"]
