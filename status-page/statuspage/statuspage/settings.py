@@ -4,65 +4,53 @@ import sys
 import platform
 
 from django.core.exceptions import ImproperlyConfigured
-
 from statuspage.config import PARAMS
 
 VERSION = '2.0.17-dev'
-
 HOSTNAME = platform.node()
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 if sys.version_info < (3, 10):
-    raise RuntimeError(
-        f"Status-Page requires Python 3.10 or later. (Currently installed: Python {platform.python_version()})"
-    )
+    raise RuntimeError(f"Status-Page requires Python 3.10 or later.")
 
 config_path = os.getenv('STATUS_PAGE_CONFIGURATION', 'statuspage.configuration')
 try:
     configuration = importlib.import_module(config_path)
-except ModuleNotFoundError as e:
-    if getattr(e, 'name') == config_path:
-        raise ImproperlyConfigured(
-            f"Specified configuration module ({config_path}) not found. Please define "
-            f"statuspage/statuspage/configuration.py per the documentation, or specify an alternate module "
-            f"in the STATUS_PAGE_CONFIGURATION environment variable."
-        )
-    raise
+except ModuleNotFoundError:
+    raise ImproperlyConfigured(f"Configuration module {config_path} not found.")
 
+# --- הגדרות חובה מהקונפיגורציה ---
 for parameter in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'REDIS', 'SITE_URL']:
     if not hasattr(configuration, parameter):
-        raise ImproperlyConfigured(f"Required parameter {parameter} is missing from configuration.")
+        raise ImproperlyConfigured(f"Required parameter {parameter} is missing.")
 
-# --- הגדרות בסיס ---
 ALLOWED_HOSTS = ['*']
 DATABASE = getattr(configuration, 'DATABASE')
 REDIS = getattr(configuration, 'REDIS')
 SECRET_KEY = getattr(configuration, 'SECRET_KEY')
 SITE_URL = getattr(configuration, 'SITE_URL')
 
-# --- תיקון השגיאה: הוספת FIELD_CHOICES ופרמטרים חסרים ---
+# --- תיקון השגיאה: PLUGINS והגדרות חסרות ---
 FIELD_CHOICES = getattr(configuration, 'FIELD_CHOICES', {})
+PLUGINS = getattr(configuration, 'PLUGINS', [])
+PLUGINS_CONFIG = getattr(configuration, 'PLUGINS_CONFIG', {})
 INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
-LOGGING = getattr(configuration, 'LOGGING', {})
-ADMINS = getattr(configuration, 'ADMINS', [])
-AUTH_PASSWORD_VALIDATORS = getattr(configuration, 'AUTH_PASSWORD_VALIDATORS', [])
+DEBUG = getattr(configuration, 'DEBUG', False)
 
-# פורמטים של זמן (נדרש בגרסה החדשה)
+# הגדרות זמן ופורמטים
 DATE_FORMAT = getattr(configuration, 'DATE_FORMAT', 'N j, Y')
 DATETIME_FORMAT = getattr(configuration, 'DATETIME_FORMAT', 'N j, Y g:i a')
 SHORT_DATE_FORMAT = getattr(configuration, 'SHORT_DATE_FORMAT', 'Y-m-d')
 SHORT_DATETIME_FORMAT = getattr(configuration, 'SHORT_DATETIME_FORMAT', 'Y-m-d H:i')
 
-# ניקוי BASE_PATH
+# נתיבים ו-URL
 BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
 if BASE_PATH:
     BASE_PATH += '/'
 
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
-DEBUG = getattr(configuration, 'DEBUG', False)
 
-# הגדרות WEBHOOKS ו-QUEUES
+# WEBHOOKS ו-QUEUES
 QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
 WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
 
@@ -70,6 +58,7 @@ for param in PARAMS:
     if hasattr(configuration, param.name):
         globals()[param.name] = getattr(configuration, param.name)
 
+# --- DATABASE ו-REDIS ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -78,51 +67,28 @@ DATABASES = {
         'PASSWORD': DATABASE.get('PASSWORD'),
         'HOST': DATABASE.get('HOST'),
         'PORT': DATABASE.get('PORT'),
-        'CONN_MAX_AGE': DATABASE.get('CONN_MAX_AGE'),
+        'CONN_MAX_AGE': DATABASE.get('CONN_MAX_AGE', 60),
     },
 }
 
-# --- לוגיקת REDIS ---
 TASKS_REDIS = REDIS.get('tasks', {})
 TASKS_REDIS_HOST = os.environ.get('REDIS_HOST', TASKS_REDIS.get('HOST', 'localhost'))
 TASKS_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', TASKS_REDIS.get('PASSWORD', ''))
-TASKS_REDIS_PORT = TASKS_REDIS.get('PORT', 6379)
-TASKS_REDIS_DATABASE = TASKS_REDIS.get('DATABASE', 0)
-
-CACHING_REDIS = REDIS.get('caching', {})
-CACHING_REDIS_HOST = os.environ.get('REDIS_HOST', CACHING_REDIS.get('HOST', 'localhost'))
-CACHING_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', CACHING_REDIS.get('PASSWORD', ''))
-CACHING_REDIS_PORT = CACHING_REDIS.get('PORT', 6379)
-CACHING_REDIS_DATABASE = CACHING_REDIS.get('DATABASE', 0)
-CACHING_REDIS_PROTO = 'rediss' if CACHING_REDIS.get('SSL', False) else 'redis'
-
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f"{CACHING_REDIS_PROTO}://{CACHING_REDIS_HOST}:{CACHING_REDIS_PORT}/{CACHING_REDIS_DATABASE}",
+        'LOCATION': f"redis://{TASKS_REDIS_HOST}:6379/0",
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PASSWORD': CACHING_REDIS_PASSWORD,
-            'SOCKET_CONNECT_TIMEOUT': 10,
-            'SOCKET_TIMEOUT': 10,
+            'PASSWORD': TASKS_REDIS_PASSWORD,
         }
     }
 }
 
-RQ_DEFAULT_TIMEOUT = getattr(configuration, 'RQ_DEFAULT_TIMEOUT', 300)
-RQ_PARAMS = {
-    'HOST': TASKS_REDIS_HOST,
-    'PORT': TASKS_REDIS_PORT,
-    'DB': TASKS_REDIS_DATABASE,
-    'PASSWORD': TASKS_REDIS_PASSWORD,
-    'DEFAULT_TIMEOUT': RQ_DEFAULT_TIMEOUT,
-    'SOCKET_TIMEOUT': 10,
-}
-
 RQ_QUEUES = {
-    'high': RQ_PARAMS,
-    'default': RQ_PARAMS,
-    'low': RQ_PARAMS,
+    'high': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
+    'default': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
+    'low': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
 }
 
 # --- אפליקציות ו-Middleware ---
@@ -151,6 +117,10 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_static',
     'django_otp.plugins.otp_totp',
 ]
+
+# הוספת הפלאגינים לרשימת האפליקציות
+for plugin in PLUGINS:
+    INSTALLED_APPS.append(plugin)
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
