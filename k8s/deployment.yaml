@@ -20,8 +20,7 @@ spec:
           workingDir: /app/statuspage
           command: [ "/bin/sh", "-c" ]
           args:
-            - |
-              python manage.py migrate --noinput
+            - "python manage.py migrate --noinput"
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -30,7 +29,6 @@ spec:
                   key: DB_PASSWORD
             - name: DB_HOST
               value: "statuspage-postgres-postgresql.default.svc.cluster.local"
-            # התיקון הקריטי ל-Redis:
             - name: REDIS_HOST
               value: "statuspage-redis-master.default.svc.cluster.local"
           envFrom:
@@ -46,14 +44,8 @@ spec:
             - containerPort: 8000
           command: [ "/bin/sh", "-c" ]
           args:
-            - gunicorn
-            - --bind
-            - 0.0.0.0:8000
-            - --workers
-            - "3"
-            - statuspage.wsgi:application
+            - "gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application"
 
-          # חובה כדי שה-ALB לא יפיל את האתר:
           readinessProbe:
             httpGet:
               path: /dashboard/login/
@@ -75,7 +67,6 @@ spec:
                   key: DB_PASSWORD
             - name: DB_HOST
               value: "statuspage-postgres-postgresql.default.svc.cluster.local"
-            # התיקון הקריטי ל-Redis:
             - name: REDIS_HOST
               value: "statuspage-redis-master.default.svc.cluster.local"
           envFrom:
