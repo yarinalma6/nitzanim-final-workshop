@@ -62,7 +62,10 @@ INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
 LOGGING = getattr(configuration, 'LOGGING', {})
 LOGIN_REQUIRED = True
 LOGIN_TIMEOUT = getattr(configuration, 'LOGIN_TIMEOUT', None)
-MEDIA_ROOT = getattr(configuration, 'MEDIA_ROOT', os.path.join(BASE_DIR, media)).rstrip('/')
+
+# --- התיקון הקריטי כאן (הוספת גרשיים סביב 'media') ---
+MEDIA_ROOT = getattr(configuration, 'MEDIA_ROOT', os.path.join(BASE_DIR, 'media')).rstrip('/')
+
 PLUGINS = getattr(configuration, 'PLUGINS', [])
 PLUGINS_CONFIG = getattr(configuration, 'PLUGINS_CONFIG', {})
 RQ_DEFAULT_TIMEOUT = getattr(configuration, 'RQ_DEFAULT_TIMEOUT', 300)
@@ -233,9 +236,9 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-# --- הגדרות קבצים סטטיים (תיקון סופי) ---
+# --- הגדרות קבצים סטטיים ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = f'/{BASE_PATH}static/' # וודא שזה מתחיל ב-/ ולא //
+STATIC_URL = f'/{BASE_PATH}static/'
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 STATICFILES_DIRS = (
