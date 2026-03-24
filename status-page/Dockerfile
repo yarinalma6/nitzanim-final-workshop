@@ -11,20 +11,32 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y build-essential libpq-dev libpq5 && rm -rf /var/lib/apt/lists/*
+# התקנת mime-support קריטית להגשת CSS תקין ב-WhiteNoise
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    libpq5 \
+    mime-support \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir rq==1.11.1 rq-scheduler==0.11.0
 
-# העתקת כל הקבצים (כולל מה שנוצר בשלב ה-Frontend)
+# העתקת הקבצים מה-Frontend Build
 COPY --from=frontend /app /app
 
-# --- התיקון הקריטי: מעבר לתיקייה הנכונה והוספת משתני סביבה ---
 WORKDIR /app/statuspage
 
-# הורדנו את ה- || true ותיקנו ל- --noinput. משתני הסביבה מונעים קריסה של ג'אנגו.
-RUN SECRET_KEY="dummy" DB_HOST="localhost" POSTGRES_PASSWORD="dummy" REDIS_HOST="localhost" python manage.py collectstatic --noinput
-# הפעלת Gunicorn (אין צורך ב-chdir כי אנחנו כבר בתיקייה הנכונה)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "statuspage.wsgi:application"]
+# יצירת התיקייה והרצת collectstatic בשלב ה-Build
+RUN mkdir -p /app/statuspage/static
+RUN SECRET_KEY="dummy" \
+    ALLOWED_HOSTS="*" \
+    DATABASE_NAME="dummy" \
+    REDIS_HOST="localhost" \
+    SITE_URL="https://status.yarin-noa.site" \
+    python manage.py collectstatic --noinput
+
+# הפעלת Gunicorn על פורט 8000 כפי שמוגדר ב-Deployment
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "statuspage.wsgi:application"]
