@@ -43,32 +43,33 @@ spec:
           ports:
             - containerPort: 8000
           command: ["/bin/sh", "-c"]
+          # --- הוספנו --timeout 120 כדי למנוע קריסות בזמן עלייה ---
           args:
-            - "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 3 statuspage.wsgi:application"
+            - "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 statuspage.wsgi:application"
 
-          # --- הוספת הגבלת משאבים (Resources) ---
+          # --- הגדלת משאבים (Resources) - מעניק לאפליקציה כוח לעלות ---
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "256Mi"
+              cpu: "500m"
             limits:
               memory: "512Mi"
-              cpu: "500m"
-          # --------------------------------------
+              cpu: "1000m"
+          # ------------------------------------------------------
 
-          # --- Health Checks (Probes) ---
+          # --- Health Checks (Probes) - מותאמים לזמן עלייה ארוך יותר ---
           readinessProbe:
             httpGet:
               path: /dashboard/login/
               port: 8000
-            initialDelaySeconds: 15
-            periodSeconds: 5
+            initialDelaySeconds: 20
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /dashboard/login/
               port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 45
+            periodSeconds: 15
           # ------------------------------
 
           env:
@@ -81,6 +82,12 @@ spec:
               value: "statuspage-postgres-postgresql.default.svc.cluster.local"
             - name: REDIS_HOST
               value: "statuspage-redis-master.default.svc.cluster.local"
+            # הוספנו מפורשות את ה-REDIS_PASSWORD למקרה שה-envFrom לא מושך אותו
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: statuspage-app-secrets
+                  key: REDIS_PASSWORD
           envFrom:
             - secretRef:
                 name: statuspage-app-secrets

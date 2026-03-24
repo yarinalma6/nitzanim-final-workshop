@@ -97,51 +97,36 @@ DATABASES = {
     },
 }
 
-# --- לוגיקת REDIS משופרת (URL Format) ---
-if 'tasks' not in REDIS:
-    raise ImproperlyConfigured("REDIS section in configuration.py is missing the 'tasks' subsection.")
-
-TASKS_REDIS = REDIS['tasks']
+# --- לוגיקת REDIS מתוקנת (Explicit Format) ---
+TASKS_REDIS = REDIS.get('tasks', {})
 TASKS_REDIS_HOST = os.environ.get('REDIS_HOST', TASKS_REDIS.get('HOST', 'localhost'))
-TASKS_REDIS_PORT = TASKS_REDIS.get('PORT', 6379)
 TASKS_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', TASKS_REDIS.get('PASSWORD', ''))
+TASKS_REDIS_PORT = TASKS_REDIS.get('PORT', 6379)
 TASKS_REDIS_DATABASE = TASKS_REDIS.get('DATABASE', 0)
 
-# בניית URL מלא עבור RQ
-if TASKS_REDIS_PASSWORD:
-    TASKS_REDIS_URL = f"redis://:{TASKS_REDIS_PASSWORD}@{TASKS_REDIS_HOST}:{TASKS_REDIS_PORT}/{TASKS_REDIS_DATABASE}"
-else:
-    TASKS_REDIS_URL = f"redis://{TASKS_REDIS_HOST}:{TASKS_REDIS_PORT}/{TASKS_REDIS_DATABASE}"
-
-# Caching
-if 'caching' not in REDIS:
-    raise ImproperlyConfigured("REDIS section in configuration.py is missing caching subsection.")
-
-CACHING_REDIS_HOST = os.environ.get('REDIS_HOST', REDIS['caching'].get('HOST', 'localhost'))
-CACHING_REDIS_PORT = REDIS['caching'].get('PORT', 6379)
-CACHING_REDIS_DATABASE = REDIS['caching'].get('DATABASE', 0)
-CACHING_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', REDIS['caching'].get('PASSWORD', ''))
-CACHING_REDIS_PROTO = 'rediss' if REDIS['caching'].get('SSL', False) else 'redis'
-
-# בניית URL מלא עבור Caching
-if CACHING_REDIS_PASSWORD:
-    CACHING_REDIS_URL = f"{CACHING_REDIS_PROTO}://:{CACHING_REDIS_PASSWORD}@{CACHING_REDIS_HOST}:{CACHING_REDIS_PORT}/{CACHING_REDIS_DATABASE}"
-else:
-    CACHING_REDIS_URL = f"{CACHING_REDIS_PROTO}://{CACHING_REDIS_HOST}:{CACHING_REDIS_PORT}/{CACHING_REDIS_DATABASE}"
+CACHING_REDIS = REDIS.get('caching', {})
+CACHING_REDIS_HOST = os.environ.get('REDIS_HOST', CACHING_REDIS.get('HOST', 'localhost'))
+CACHING_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', CACHING_REDIS.get('PASSWORD', ''))
+CACHING_REDIS_PORT = CACHING_REDIS.get('PORT', 6379)
+CACHING_REDIS_DATABASE = CACHING_REDIS.get('DATABASE', 0)
+CACHING_REDIS_PROTO = 'rediss' if CACHING_REDIS.get('SSL', False) else 'redis'
 
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': CACHING_REDIS_URL,
+        'LOCATION': f"{CACHING_REDIS_PROTO}://{CACHING_REDIS_HOST}:{CACHING_REDIS_PORT}/{CACHING_REDIS_DATABASE}",
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PASSWORD': CACHING_REDIS_PASSWORD,
         }
     }
 }
 
-# --- הגדרות RQ (Queuing) ---
 RQ_PARAMS = {
-    'URL': TASKS_REDIS_URL,
+    'HOST': TASKS_REDIS_HOST,
+    'PORT': TASKS_REDIS_PORT,
+    'DB': TASKS_REDIS_DATABASE,
+    'PASSWORD': TASKS_REDIS_PASSWORD,
     'DEFAULT_TIMEOUT': RQ_DEFAULT_TIMEOUT,
 }
 
@@ -253,7 +238,6 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-# --- הגדרות קבצים סטטיים ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = f'/{BASE_PATH}static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
@@ -309,7 +293,6 @@ SWAGGER_SETTINGS = {
     'VALIDATOR_URL': None,
 }
 
-# --- טעינת פלאגינים ---
 for plugin_name in PLUGINS:
     try:
         plugin = importlib.import_module(plugin_name)
