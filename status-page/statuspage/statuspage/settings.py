@@ -106,7 +106,8 @@ if 'tasks' not in REDIS:
         "REDIS section in configuration.py is missing the 'tasks' subsection."
     )
 TASKS_REDIS = REDIS['tasks']
-TASKS_REDIS_HOST = TASKS_REDIS.get('HOST', 'localhost')
+# --- הוספנו משיכת משתני סביבה מהקונטיינר ---
+TASKS_REDIS_HOST = os.environ.get('REDIS_HOST', TASKS_REDIS.get('HOST', 'localhost'))
 TASKS_REDIS_PORT = TASKS_REDIS.get('PORT', 6379)
 TASKS_REDIS_SENTINELS = TASKS_REDIS.get('SENTINELS', [])
 TASKS_REDIS_USING_SENTINEL = all([
@@ -115,7 +116,7 @@ TASKS_REDIS_USING_SENTINEL = all([
 ])
 TASKS_REDIS_SENTINEL_SERVICE = TASKS_REDIS.get('SENTINEL_SERVICE', 'default')
 TASKS_REDIS_SENTINEL_TIMEOUT = TASKS_REDIS.get('SENTINEL_TIMEOUT', 10)
-TASKS_REDIS_PASSWORD = TASKS_REDIS.get('PASSWORD', '')
+TASKS_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', TASKS_REDIS.get('PASSWORD', ''))
 TASKS_REDIS_DATABASE = TASKS_REDIS.get('DATABASE', 0)
 TASKS_REDIS_SSL = TASKS_REDIS.get('SSL', False)
 TASKS_REDIS_SKIP_TLS_VERIFY = TASKS_REDIS.get('INSECURE_SKIP_TLS_VERIFY', False)
@@ -125,10 +126,11 @@ if 'caching' not in REDIS:
     raise ImproperlyConfigured(
         "REDIS section in configuration.py is missing caching subsection."
     )
-CACHING_REDIS_HOST = REDIS['caching'].get('HOST', 'localhost')
+# --- הוספנו משיכת משתני סביבה גם לקאשינג ---
+CACHING_REDIS_HOST = os.environ.get('REDIS_HOST', REDIS['caching'].get('HOST', 'localhost'))
 CACHING_REDIS_PORT = REDIS['caching'].get('PORT', 6379)
 CACHING_REDIS_DATABASE = REDIS['caching'].get('DATABASE', 0)
-CACHING_REDIS_PASSWORD = REDIS['caching'].get('PASSWORD', '')
+CACHING_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', REDIS['caching'].get('PASSWORD', ''))
 CACHING_REDIS_SENTINELS = REDIS['caching'].get('SENTINELS', [])
 CACHING_REDIS_SENTINEL_SERVICE = REDIS['caching'].get('SENTINEL_SERVICE', 'default')
 CACHING_REDIS_PROTO = 'rediss' if REDIS['caching'].get('SSL', False) else 'redis'
