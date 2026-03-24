@@ -3,6 +3,8 @@ module "ecr" {
 
   repository_name = "yarin-noa-project"
 
+  repository_image_tag_mutability = "MUTABLE"
+
   repository_read_write_access_arns = ["arn:aws:iam::992382545251:role/GithubAction-ECR-Role-yarin"]
   repository_lifecycle_policy = jsonencode({
     rules = [
