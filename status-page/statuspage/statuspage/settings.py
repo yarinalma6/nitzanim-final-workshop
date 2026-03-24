@@ -4,13 +4,10 @@ import sys
 import platform
 
 from django.core.exceptions import ImproperlyConfigured
-
 from statuspage.config import PARAMS
 
 VERSION = '2.0.17-dev'
-
 HOSTNAME = platform.node()
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 if sys.version_info < (3, 10):
@@ -18,16 +15,13 @@ if sys.version_info < (3, 10):
         f"Status-Page requires Python 3.10 or later. (Currently installed: Python {platform.python_version()})"
     )
 
-
 config_path = os.getenv('STATUS_PAGE_CONFIGURATION', 'statuspage.configuration')
 try:
     configuration = importlib.import_module(config_path)
 except ModuleNotFoundError as e:
     if getattr(e, 'name') == config_path:
         raise ImproperlyConfigured(
-            f"Specified configuration module ({config_path}) not found. Please define "
-            f"statuspage/statuspage/configuration.py per the documentation, or specify an alternate module "
-            f"in the STATUS_PAGE_CONFIGURATION environment variable."
+            f"Specified configuration module ({config_path}) not found."
         )
     raise
 
@@ -35,22 +29,28 @@ for parameter in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'REDIS', 'SITE_URL'
     if not hasattr(configuration, parameter):
         raise ImproperlyConfigured(f"Required parameter {parameter} is missing from configuration.")
 
-ALLOWED_HOSTS = getattr(configuration, 'ALLOWED_HOSTS')
+# --- תיקון קריטי: ALLOWED_HOSTS ו-BASE_PATH ---
+ALLOWED_HOSTS = ['*'] # מאפשר גישה מה-ALB של AWS
 DATABASE = getattr(configuration, 'DATABASE')
 REDIS = getattr(configuration, 'REDIS')
 SECRET_KEY = getattr(configuration, 'SECRET_KEY')
 SITE_URL = getattr(configuration, 'SITE_URL')
 
+# ניקוי BASE_PATH כדי למנוע סלאשים כפולים (//)
+BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
+if BASE_PATH:
+    BASE_PATH += '/'
+
 ADMINS = getattr(configuration, 'ADMINS', [])
 AUTH_PASSWORD_VALIDATORS = getattr(configuration, 'AUTH_PASSWORD_VALIDATORS', [])
-BASE_PATH = getattr(configuration, 'BASE_PATH', '')
-if BASE_PATH:
-    BASE_PATH = BASE_PATH.strip('/') + '/'
 CORS_ORIGIN_ALLOW_ALL = getattr(configuration, 'CORS_ORIGIN_ALLOW_ALL', False)
 CORS_ORIGIN_REGEX_WHITELIST = getattr(configuration, 'CORS_ORIGIN_REGEX_WHITELIST', [])
 CORS_ORIGIN_WHITELIST = getattr(configuration, 'CORS_ORIGIN_WHITELIST', [])
 CSRF_COOKIE_NAME = getattr(configuration, 'CSRF_COOKIE_NAME', 'csrftoken')
-CSRF_TRUSTED_ORIGINS = getattr(configuration, 'CSRF_TRUSTED_ORIGINS', [])
+
+# הוספת הדומיין לרשימת המהימנים עבור ה-ALB
+CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
+
 DATE_FORMAT = getattr(configuration, 'DATE_FORMAT', 'N j, Y')
 DATETIME_FORMAT = getattr(configuration, 'DATETIME_FORMAT', 'N j, Y g:i a')
 DEBUG = getattr(configuration, 'DEBUG', False)
@@ -62,7 +62,7 @@ INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
 LOGGING = getattr(configuration, 'LOGGING', {})
 LOGIN_REQUIRED = True
 LOGIN_TIMEOUT = getattr(configuration, 'LOGIN_TIMEOUT', None)
-MEDIA_ROOT = getattr(configuration, 'MEDIA_ROOT', os.path.join(BASE_DIR, 'media')).rstrip('/')
+MEDIA_ROOT = getattr(configuration, 'MEDIA_ROOT', os.path.join(BASE_DIR, media)).rstrip('/')
 PLUGINS = getattr(configuration, 'PLUGINS', [])
 PLUGINS_CONFIG = getattr(configuration, 'PLUGINS_CONFIG', {})
 RQ_DEFAULT_TIMEOUT = getattr(configuration, 'RQ_DEFAULT_TIMEOUT', 300)
@@ -158,7 +158,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic', # הוספה כדי לעזור בפיתוח
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'django_tables2',
@@ -181,7 +181,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # חובה מיקום שני!
+    'whitenoise.middleware.WhiteNoiseMiddleware', # חובה מיקום שני
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -195,7 +195,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'statuspage.urls'
-
 TEMPLATES_DIR = f'{BASE_DIR}/templates'
 TEMPLATES = [
     {
@@ -234,13 +233,11 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-# --- תיקון קבצים סטטיים ---
+# --- הגדרות קבצים סטטיים (תיקון סופי) ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = '/static/' # הורדנו את ה-BASE_PATH כדי לפשט
+STATIC_URL = f'/{BASE_PATH}static/' # וודא שזה מתחיל ב-/ ולא //
 
-# הגדרה פשוטה ואמינה יותר ללא Manifest (מונע שגיאות 500 אם קובץ חסר)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'project-static', 'dist'),
     os.path.join(BASE_DIR, 'project-static', 'img'),
@@ -285,8 +282,6 @@ REST_FRAMEWORK = {
     },
     'VIEW_NAME_FUNCTION': 'utilities.api.get_view_name',
 }
-
-# (שאר הקובץ נשאר זהה...)
 
 SWAGGER_SETTINGS = {
     'DEFAULT_AUTO_SCHEMA_CLASS': 'utilities.custom_inspectors.StatusPageSwaggerAutoSchema',
@@ -354,41 +349,27 @@ RQ_QUEUES = {
 }
 
 for plugin_name in PLUGINS:
-
-    # Import plugin module
     try:
         plugin = importlib.import_module(plugin_name)
     except ModuleNotFoundError as e:
         if getattr(e, 'name') == plugin_name:
             raise ImproperlyConfigured(
-                "Unable to import plugin {}: Module not found. Check that the plugin module has been installed within the "
-                "correct Python environment.".format(plugin_name)
+                "Unable to import plugin {}: Module not found.".format(plugin_name)
             )
         raise e
-
-    # Determine plugin config and add to INSTALLED_APPS.
     try:
         plugin_config = plugin.config
         INSTALLED_APPS.append("{}.{}".format(plugin_config.__module__, plugin_config.__name__))
     except AttributeError:
         raise ImproperlyConfigured(
-            "Plugin {} does not provide a 'config' variable. This should be defined in the plugin's __init__.py file "
-            "and point to the PluginConfig subclass.".format(plugin_name)
+            "Plugin {} does not provide a 'config' variable.".format(plugin_name)
         )
-
-    # Validate user-provided configuration settings and assign defaults
     if plugin_name not in PLUGINS_CONFIG:
         PLUGINS_CONFIG[plugin_name] = {}
     plugin_config.validate(PLUGINS_CONFIG[plugin_name], VERSION)
-
-    # Add middleware
     plugin_middleware = plugin_config.middleware
     if plugin_middleware and type(plugin_middleware) in (list, tuple):
         MIDDLEWARE.extend(plugin_middleware)
-
-    # Create RQ queues dedicated to the plugin
-    # we use the plugin name as a prefix for queue name's defined in the plugin config
-    # ex: mysuperplugin.mysuperqueue1
     if type(plugin_config.queues) is not list:
         raise ImproperlyConfigured(
             "Plugin {} queues must be a list.".format(plugin_name)
