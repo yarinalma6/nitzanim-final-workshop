@@ -30,32 +30,21 @@ REDIS = getattr(configuration, 'REDIS')
 SECRET_KEY = getattr(configuration, 'SECRET_KEY')
 SITE_URL = getattr(configuration, 'SITE_URL')
 
+DEBUG = getattr(configuration, 'DEBUG', False)
 FIELD_CHOICES = getattr(configuration, 'FIELD_CHOICES', {})
 PLUGINS = getattr(configuration, 'PLUGINS', [])
 PLUGINS_CONFIG = getattr(configuration, 'PLUGINS_CONFIG', {})
-INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
-DEBUG = getattr(configuration, 'DEBUG', False)
 
-# --- QUEUE MAPPINGS ---
-QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
-WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
-
-# הגדרות אבטחה
-LOGIN_PERSISTENCE = getattr(configuration, 'LOGIN_PERSISTENCE', False)
-CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
-
-for param in PARAMS:
-    if hasattr(configuration, param.name):
-        globals()[param.name] = getattr(configuration, param.name)
-
-# --- תיקון BASE_PATH ---
+# --- תיקון BASE_PATH (חובה ל-Widgets) ---
 BASE_PATH = getattr(configuration, 'BASE_PATH', '').strip('/')
 if BASE_PATH:
     BASE_PATH += '/'
 else:
     BASE_PATH = ''
 
-# --- DATABASE & REDIS ---
+CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
+
+# --- DATABASE & REDIS CONFIG ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -64,12 +53,19 @@ DATABASES = {
         'PASSWORD': DATABASE.get('PASSWORD'),
         'HOST': DATABASE.get('HOST'),
         'PORT': DATABASE.get('PORT'),
-        'CONN_MAX_AGE': DATABASE.get('CONN_MAX_AGE', 60),
     },
 }
 
 TASKS_REDIS_HOST = os.environ.get('REDIS_HOST', REDIS.get('tasks', {}).get('HOST', 'localhost'))
 TASKS_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', REDIS.get('tasks', {}).get('PASSWORD', ''))
+
+# --- RQ_QUEUES (התיקון לשגיאת ה-Build הנוכחית) ---
+RQ_QUEUES = {
+    'high': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
+    'default': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
+    'low': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
+}
+QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
 
 CACHES = {
     'default': {
@@ -81,6 +77,11 @@ CACHES = {
         }
     }
 }
+
+# טעינת פרמטרים נוספים מה-Core
+for param in PARAMS:
+    if hasattr(configuration, param.name):
+        globals()[param.name] = getattr(configuration, param.name)
 
 # --- APPS & MIDDLEWARE ---
 INSTALLED_APPS = [
@@ -152,16 +153,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'statuspage.wsgi.application'
 
-# --- תיקון קריטי לסטטיקס (הצבעים חוזרים כאן) ---
+# --- STATIC & MEDIA (התיקון לעיצוב האתר) ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
-
-# אומר לג'אנגו לחפש קבצים גם בתיקיית הפרויקט המקורית
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'project-static'),
 ]
-
-# שימוש ב-Storage פשוט ואמין
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
 
