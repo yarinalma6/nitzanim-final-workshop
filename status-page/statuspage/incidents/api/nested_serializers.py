@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from incidents.models import Incident, IncidentUpdate
+from incidents.models import Incident, IncidentUpdate, IncidentTemplate
 from statuspage.api.serializers import WritableNestedSerializer
 
 
@@ -11,7 +11,7 @@ class NestedIncidentSerializer(WritableNestedSerializer):
 
     class Meta:
         model = Incident
-        fields = ('id', 'url', 'display', 'title', 'status', 'impact')
+        fields = ('id', 'url', 'display', 'title', 'status', 'impact', 'created', 'last_updated')
 
 
 class NestedIncidentUpdateSerializer(WritableNestedSerializer):
@@ -21,4 +21,14 @@ class NestedIncidentUpdateSerializer(WritableNestedSerializer):
 
     class Meta:
         model = IncidentUpdate
-        fields = ('id', 'url', 'display', 'text', 'new_status', 'status')
+        fields = ('id', 'url', 'display', 'text', 'new_status', 'status', 'created', 'last_updated')
+
+
+class NestedIncidentTemplateSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(
+        view_name='incidents-api:incidenttemplate-detail'
+    )
+
+    class Meta:
+        model = IncidentTemplate
+        fields = ('id', 'url', 'display', 'template_name', 'title', 'status', 'impact', 'created', 'last_updated')

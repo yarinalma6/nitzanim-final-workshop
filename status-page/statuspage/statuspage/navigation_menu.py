@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Sequence, Optional
 
-from extras.registry import registry
+from statuspage.registry import registry
 
 #
 # Nav menu data classes
@@ -44,7 +44,7 @@ def get_model_item(app_label, model_name, label):
 
 def get_past_model_item(app_label, model_name, label):
     return MenuItem(
-        link=f'{app_label}:past',
+        link=f'{app_label}:{model_name}_past',
         link_text=label,
         permissions=[f'{app_label}.view_{model_name}'],
     )
@@ -68,6 +68,7 @@ DEFAULT_MENU = Menu(
             items=(
                 get_model_item('incidents', 'incident', 'Incidents'),
                 get_past_model_item('incidents', 'incident', 'Past'),
+                get_model_item('incidents', 'incidenttemplate', 'Incident Templates'),
             ),
         ),
         MenuDropdown(
@@ -76,6 +77,7 @@ DEFAULT_MENU = Menu(
             items=(
                 get_model_item('maintenances', 'maintenance', 'Maintenances'),
                 get_past_model_item('maintenances', 'maintenance', 'Past'),
+                get_model_item('maintenances', 'maintenancetemplate', 'Maintenance Templates'),
             ),
         ),
         MenuDropdown(
@@ -92,6 +94,24 @@ DEFAULT_MENU = Menu(
             items=(
                 get_model_item('metrics', 'metric', 'Metrics'),
             ),
+        ),
+        MenuDropdown(
+            label='Operations',
+            groups=(
+                MenuGroup(
+                    label='Integrations',
+                    items=(
+                        get_model_item('extras', 'webhook', 'Webhooks'),
+                    ),
+                ),
+                MenuGroup(
+                    label='Logging',
+                    items=(
+                        get_model_item('extras', 'objectchange', 'Changelog'),
+                    ),
+                ),
+            ),
+            items=(),
         ),
     ),
 )

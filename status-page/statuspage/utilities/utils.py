@@ -1,9 +1,13 @@
+from email.utils import make_msgid
+
 from django.conf import settings
-from django.core.mail import send_mail as django_send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.core.serializers import serialize
 import json
 
+from django.db import transaction
 from django.http import QueryDict
+from jinja2.sandbox import SandboxedEnvironment
 from mptt.models import MPTTModel
 import bleach
 
@@ -11,6 +15,13 @@ from extras.plugins import PluginConfig
 from incidents.choices import IncidentImpactChoices
 from components.choices import ComponentStatusChoices
 from statuspage.config import get_config
+
+
+def title(value):
+    """
+    Improved implementation of str.title(); retains all existing uppercase letters.
+    """
+    return ' '.join([w[0].upper() + w[1:] for w in str(value).split()])
 
 
 def get_viewname(model, action=None, rest_api=False):
@@ -139,13 +150,17 @@ def clean_html(html, schemes):
     )
 
 
-def content_type_name(ct):
+def content_type_name(ct, include_app=True):
     """
     Return a human-friendly ContentType name (e.g. "DCIM > Site").
     """
     try:
         meta = ct.model_class()._meta
-        return f'{meta.app_config.verbose_name} > {meta.verbose_name}'
+        app_label = title(meta.app_config.verbose_name)
+        model_name = title(meta.verbose_name)
+        if include_app:
+            return f'{app_label} > {model_name}'
+        return model_name
     except AttributeError:
         # Model no longer exists
         return f'{ct.app_label} > {ct.model}'
@@ -245,6 +260,15 @@ def deepmerge(original, new):
     return merged
 
 
+def render_jinja2(template_code, context):
+    """
+    Render a Jinja2 template with the provided context. Return the rendered content.
+    """
+    environment = SandboxedEnvironment()
+    environment.filters.update(get_config().JINJA2_FILTERS)
+    return environment.from_string(source=template_code).render(**context)
+
+
 def dict_to_filter_params(d, prefix=''):
     """
     Translate a dictionary of attributes to a nested set of parameters suitable for QuerySet filtering. For example:
@@ -277,12 +301,30 @@ def dict_to_filter_params(d, prefix=''):
     return params
 
 
-def send_mail(subject, html_message, message, recipient_list):
+def get_mail_domain():
+    splitted_domain = settings.SERVER_EMAIL.split("@")
+    return splitted_domain[len(splitted_domain) - 1]
+
+
+def send_mail(subject, html_message, message, recipient_list, headers):
     config = get_config()
-    django_send_mail(
+    email = EmailMultiAlternatives(
         subject=f'{settings.EMAIL_SUBJECT_PREFIX}{subject}',
-        message=f'{message}',
-        html_message=f'{html_message}',
+        body=f'{message}',
         from_email=f'{config.SITE_TITLE} <{settings.DEFAULT_FROM_EMAIL}>',
-        recipient_list=recipient_list,
+        to=recipient_list,
+        headers={
+            'Message-ID': make_msgid(domain=get_mail_domain()),
+            **headers,
+        },
     )
+    email.attach_alternative(f'{html_message}', 'text/html')
+    email.send(fail_silently=False)
+
+
+def on_transaction_commit(func):
+    """ Create the decorator """
+    def inner(*args, **kwargs):
+        transaction.on_commit(lambda: func(*args, **kwargs))
+
+    return inner

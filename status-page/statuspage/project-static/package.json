@@ -4,12 +4,22 @@
   "main": "dist/statuspage.js",
   "license": "Apache-2.0",
   "private": true,
-
   "scripts": {
     "bundle": "node bundle.js",
-    "build:js": "esbuild src/index.ts --bundle --minify --sourcemap --outfile=dist/statuspage-alpine.js",
-    "build": "yarn bundle && yarn build:js",
-    "dev": "yarn bundle --watch"
+    "bundle:styles": "node bundle.js --styles",
+    "bundle:scripts": "node bundle.js --scripts",
+    "format": "yarn format:scripts && yarn format:styles",
+    "format:scripts": "prettier -w src/**/*.ts",
+    "format:styles": "prettier -w styles/**/*.scss",
+    "validate": "yarn validate:types && yarn validate:lint",
+    "validate:lint": "eslint -c .eslintrc ./src/**/*.ts",
+    "validate:types": "tsc --noEmit",
+    "validate:formatting": "yarn validate:formatting:scripts && yarn validate:formatting:styles",
+    "validate:formatting:styles": "prettier -c styles/**/*.scss",
+    "validate:formatting:scripts": "prettier -c src/**/*.ts",
+    "tailwind:dev": "concurrently \"npm:tailwind:dev:core\" \"npm:tailwind:dev:ss-styles\"",
+    "tailwind:dev:core": "cross-env NODE_ENV=development tailwindcss --postcss -i ./styles/styles.css -o ./dist/statuspage-tailwind.css -w",
+    "tailwind:dev:ss-styles": "cross-env NODE_ENV=development tailwindcss --postcss -i ./styles/select-styles.css -o ./dist/statuspage-ss-select-styles.css -w"
   },
   "dependencies": {
     "@mdi/font": "^7.0.96",

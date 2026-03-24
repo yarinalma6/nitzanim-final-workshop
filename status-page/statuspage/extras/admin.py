@@ -13,14 +13,18 @@ from .models import ConfigRevision
 class ConfigRevisionAdmin(admin.ModelAdmin):
     fieldsets = [
         ('Site', {
-            'fields': ('SITE_TITLE', 'SITE_SUBSCRIBERS',),
+            'fields': ('SITE_TITLE', 'SITE_SUBSCRIBERS', 'SITE_PUBLIC_WEBHOOKS',),
         }),
         ('Custom Styles', {
-            'fields': ('CUSTOM_STYLE_HEADER', 'CUSTOM_STYLE_HEADER_DISABLE_CORE', 'CUSTOM_STYLE_FOOTER',
-                       'CUSTOM_STYLE_FOOTER_DISABLE_CORE', 'CUSTOM_STYLE_CSS',),
+            'fields': ('HIDE_HISTORY_WHEN_EMPTY', 'CUSTOM_STYLE_HEADER', 'CUSTOM_STYLE_HEADER_DISABLE_CORE',
+                       'CUSTOM_STYLE_FOOTER', 'CUSTOM_STYLE_FOOTER_DISABLE_CORE', 'CUSTOM_STYLE_CSS',),
         }),
         ('Security', {
-            'fields': ('ALLOWED_URL_SCHEMES',),
+            'fields': ('ALLOWED_URL_SCHEMES', 'CAPTCHA_PROVIDER', 'CAPTCHA_PUBLIC_KEY', 'CAPTCHA_PRIVATE_KEY',),
+        }),
+        ('Banners', {
+            'fields': ('BANNER_LOGIN', 'BANNER_TOP', 'BANNER_BOTTOM'),
+            'classes': ('font-mono',),
         }),
         ('Pagination', {
             'fields': ('PAGINATE_COUNT', 'MAX_PAGE_SIZE'),

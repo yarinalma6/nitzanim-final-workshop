@@ -46,8 +46,8 @@ markdown_extensions:
     - admonition
     - attr_list
     - pymdownx.emoji:
-        emoji_index: !!python/name:materialx.emoji.twemoji
-        emoji_generator: !!python/name:materialx.emoji.to_svg
+        emoji_index: !!python/name:material.extensions.emoji.twemoji
+        emoji_generator: !!python/name:material.extensions.emoji.to_svg
     - pymdownx.superfences:
         custom_fences:
           - name: mermaid
@@ -67,6 +67,15 @@ nav:
         - 4. Gunicorn: 'installation/4-gunicorn.md'
         - 5. HTTP Server: 'installation/5-http-server.md'
         - Upgrading Status-Page: 'installation/upgrading.md'
+    - Configuration:
+        - Captcha: 'configuration/captcha.md'
+    - Important Notes:
+        - Captcha: 'important-notes/admin-panel.md'
     - Release Notes:
         - Overview: 'release-notes/index.md'
+        - Version 2.5: 'release-notes/version-2.5.md'
+        - Version 2.4: 'release-notes/version-2.4.md'
+        - Version 2.3: 'release-notes/version-2.3.md'
+        - Version 2.2: 'release-notes/version-2.2.md'
+        - Version 2.1: 'release-notes/version-2.1.md'
         - Version 2.0: 'release-notes/version-2.0.md'
