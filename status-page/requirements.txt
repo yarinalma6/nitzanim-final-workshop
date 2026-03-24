@@ -26,3 +26,4 @@ segno==1.5.2
 swagger-spec-validator==3.0.3
 typing-extensions==4.4.0
 whitenoise==6.6.0
+pysvg-py3
