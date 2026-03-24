@@ -4,7 +4,7 @@ WORKDIR /app
 COPY . .
 WORKDIR /app/statuspage/project-static
 RUN yarn install
-RUN yarn build
+RUN yarn bundle
 
 # --- שלב 2: סביבת הפרודקשן (Python) ---
 FROM python:3.10-slim
