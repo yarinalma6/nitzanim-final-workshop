@@ -36,7 +36,7 @@ PLUGINS_CONFIG = getattr(configuration, 'PLUGINS_CONFIG', {})
 INTERNAL_IPS = getattr(configuration, 'INTERNAL_IPS', ('127.0.0.1', '::1'))
 DEBUG = getattr(configuration, 'DEBUG', False)
 
-# --- QUEUE MAPPINGS (התיקון לשגיאה שלך) ---
+# --- QUEUE MAPPINGS ---
 QUEUE_MAPPINGS = getattr(configuration, 'QUEUE_MAPPINGS', {'webhook': 'default'})
 WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
 
@@ -44,9 +44,17 @@ WEBHOOKS_ENABLED = getattr(configuration, 'WEBHOOKS_ENABLED', True)
 LOGIN_PERSISTENCE = getattr(configuration, 'LOGIN_PERSISTENCE', False)
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
 
+# טעינת פרמטרים נוספים מהקונפיגורציה
 for param in PARAMS:
     if hasattr(configuration, param.name):
         globals()[param.name] = getattr(configuration, param.name)
+
+# --- תיקון קריטי: הגדרת BASE_PATH שתמיד תהיה קיימת ---
+BASE_PATH = getattr(configuration, 'BASE_PATH', os.environ.get('BASE_PATH', '')).strip('/')
+if BASE_PATH:
+    BASE_PATH += '/'
+else:
+    BASE_PATH = '' # מבטיח שהמשתנה קיים כסטרינג ריק למניעת AttributeError
 
 # --- DATABASE & REDIS ---
 DATABASES = {
