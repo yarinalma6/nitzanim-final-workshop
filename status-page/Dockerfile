@@ -11,12 +11,12 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# התקנת mime-support קריטית להגשת CSS תקין ב-WhiteNoise
+# התקנת media-types (התחליף ל-mime-support) קריטית להגשת CSS תקין ב-WhiteNoise
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     libpq5 \
-    mime-support \
+    media-types \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

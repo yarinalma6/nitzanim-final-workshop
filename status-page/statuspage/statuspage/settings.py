@@ -19,17 +19,18 @@ for parameter in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'REDIS', 'SITE_URL'
     if not hasattr(configuration, parameter):
         raise ImproperlyConfigured(f"Required parameter {parameter} is missing.")
 
-# --- הגדרות אבטחה ו-Proxy (קריטי ל-AWS ALB) ---
+# --- הגדרות אבטחה ו-Proxy (קריטי לעבודה עם AWS ALB) ---
 ALLOWED_HOSTS = ['*']
 # אומר ל-Django לסמוך על ה-Header של ה-ALB שמעיד על HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
-# הגדרות URL מתוך הקונפיגורציה
 SECRET_KEY = getattr(configuration, 'SECRET_KEY')
 SITE_URL = getattr(configuration, 'SITE_URL')
 CSRF_TRUSTED_ORIGINS = [SITE_URL, 'https://status.yarin-noa.site']
+
+DEBUG = getattr(configuration, 'DEBUG', False)
 
 # --- מסדי נתונים ---
 DATABASE = getattr(configuration, 'DATABASE')
@@ -49,6 +50,12 @@ REDIS = getattr(configuration, 'REDIS')
 TASKS_REDIS_HOST = os.environ.get('REDIS_HOST', REDIS.get('tasks', {}).get('HOST', 'localhost'))
 TASKS_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', REDIS.get('tasks', {}).get('PASSWORD', ''))
 
+RQ_QUEUES = {
+    'high': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
+    'default': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
+    'low': {'HOST': TASKS_REDIS_HOST, 'PORT': 6379, 'DB': 0, 'PASSWORD': TASKS_REDIS_PASSWORD},
+}
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -60,14 +67,18 @@ CACHES = {
     }
 }
 
-# --- אפליקציות ו-Middleware (כולל WhiteNoise) ---
+for param in PARAMS:
+    if hasattr(configuration, param.name):
+        globals()[param.name] = getattr(configuration, param.name)
+
+# --- אפליקציות ו-Middleware ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic', # WhiteNoise מטפל בסטטיק
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'django_tables2',
@@ -81,26 +92,39 @@ INSTALLED_APPS = [
     'subscribers',
     'django_rq',
     'drf_yasg',
+    'queuing',
+    'django_otp',
+    'django_otp.plugins.otp_static',
+    'django_otp.plugins.otp_totp',
+    'otp_yubikey',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # חובה מיד אחרי SecurityMiddleware
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'statuspage.middleware.APIVersionMiddleware',
+    'statuspage.middleware.ObjectChangeMiddleware',
 ]
 
 ROOT_URLCONF = 'statuspage.urls'
+TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [TEMPLATES_DIR],
         'APP_DIRS': True,
         'OPTIONS': {
+            'builtins': [
+                'utilities.templatetags.builtins.filters',
+                'utilities.templatetags.builtins.tags',
+            ],
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -112,7 +136,9 @@ TEMPLATES = [
     },
 ]
 
-# --- קבצים סטטיים (נתיבים סופיים) ---
+WSGI_APPLICATION = 'statuspage.wsgi.application'
+
+# --- קבצים סטטיים ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
@@ -120,8 +146,9 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'project-static', 'img'),
 ]
 
-# אחסון WhiteNoise עם דחיסה וניהול Cache
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
