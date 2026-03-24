@@ -156,9 +156,13 @@ WSGI_APPLICATION = 'statuspage.wsgi.application'
 # --- STATIC & MEDIA (התיקון לעיצוב האתר) ---
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
+
+# השינוי הקריטי: אנחנו מכוונים בדיוק לתיקיות שה-bundle יצר!
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'project-static'),
+    os.path.join(BASE_DIR, 'project-static', 'dist'),
+    os.path.join(BASE_DIR, 'project-static', 'img'),
 ]
+
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
 
