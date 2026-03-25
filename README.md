@@ -25,27 +25,28 @@ This repository contains the complete infrastructure and application lifecycle f
 ## 📐 Architecture
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '18px', 'fontFamily': 'Inter, system-ui, sans-serif'}}}%%
 graph TD
     %% Global Styles
-    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white;
-    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:2px,color:white;
-    classDef db fill:#333,stroke:#f80,stroke-width:2px,color:white;
-    classDef gh fill:#24292e,stroke:#fff,stroke-width:2px,color:white;
-    classDef app fill:#28a745,stroke:#fff,stroke-width:2px,color:white;
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:3px,color:white,font-weight:bold,padding:20px;
+    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:3px,color:white,font-weight:bold,padding:20px;
+    classDef db fill:#333,stroke:#f80,stroke-width:3px,color:white,font-weight:bold,padding:20px;
+    classDef gh fill:#24292e,stroke:#fff,stroke-width:3px,color:white,font-weight:bold,padding:20px;
+    classDef app fill:#28a745,stroke:#fff,stroke-width:3px,color:white,font-weight:bold,padding:20px;
 
     subgraph "🌐 External Traffic"
         DNS["☁️ Route53: status.yarin-noa.site"]:::aws --> ALB["🔌 AWS Application Load Balancer"]:::aws
     end
 
     subgraph "⚙️ DevOps Infrastructure (Terraform)"
-        TF["🚜 Terraform"]:::gh -->|State| S3["📦 S3 Bucket: State Store"]:::aws
+        TF["🚜 Terraform IaC"]:::gh -->|State| S3["📦 S3 Bucket: State Store"]:::aws
         TF -->|Provision| VPC["🌐 AWS VPC (Private/Public)"]:::aws
         TF -->|Provision| EKS["☸️ AWS EKS Cluster"]:::aws
     end
 
     subgraph "🐙 GitHub Ecosystem"
-        Repo["📂 GitHub Repo (Single Source of Truth)"]:::gh --> GHA["🤖 GitHub Actions"]:::gh
-        GHA -->|1. Build & Push| ECR["📦 Amazon ECR"]:::aws
+        Repo["📂 GitHub Repo (Single Source of Truth)"]:::gh --> GHA["🤖 GitHub Actions (CI/CD)"]:::gh
+        GHA -->|1. Build & Push| ECR["📦 Amazon ECR Registry"]:::aws
     end
 
     subgraph "☸️ AWS EKS Cluster (v1.35)"
@@ -62,9 +63,9 @@ graph TD
         ECR -->|3. Pull Image| Worker
 
         subgraph "💾 Persistence & Cache"
-            Pods --> DB[("🐘 PostgreSQL")]:::db
+            Pods --> DB[("🐘 PostgreSQL DB")]:::db
             Worker --> DB
-            Pods --> Cache[("🔋 Redis")]:::db
+            Pods --> Cache[("🔋 Redis Cache")]:::db
             Worker --> Cache
         end
         
