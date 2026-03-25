@@ -14,7 +14,7 @@ spec:
   # --- מאיפה לוקחים את הקוד? (Source) ---
   source:
     # הכתובת של מאגר הגיטהב שלך (חייב להסתיים ב- .git)
-    repoURL: https://github.com/yarinalma6/nitzanim-final-workshop.git
+    repoURL: https://github.com/yarinalma6/Statuspage-EKS-workshop.git
     # הענף (Branch) בגיט שאחריו ArgoCD צריך לעקוב
     targetRevision: main
     # התיקייה הספציפית בתוך הריפו שבה נמצאים קבצי הקוברנטיס (Deployment, Services)

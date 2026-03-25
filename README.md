@@ -1,7 +1,7 @@
-# 🟢 Nitzanim DevOps Workshop - Final Project
+# 🟢 Statuspage-EKS-workshop - Final Project
 
 ## 🏗️ Project Overview
-This repository contains the complete infrastructure and application lifecycle for the **StatusPage** project, developed as part of the Nitzanim DevOps Bootcamp final workshop. The project demonstrates a production-ready DevOps pipeline, from Infrastructure as Code (IaC) to GitOps-based deployment and comprehensive observability.
+This repository contains the complete infrastructure and application lifecycle for the **Statuspage-EKS-workshop** project, developed as part of a DevOps bootcamp final workshop. The project demonstrates a production-ready DevOps pipeline, from Infrastructure as Code (IaC) to GitOps-based deployment and comprehensive observability.
 
 **Developed by**: Yarin & Noa 🚀
 
