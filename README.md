@@ -30,6 +30,12 @@ graph TD
         DNS[Route53: status.yarin-noa.site] --> ALB[AWS Application Load Balancer]
     end
 
+    subgraph "DevOps Infrastructure"
+        TF[Terraform] -->|State| S3[S3 Bucket: nitzanim-tf-state]
+        TF -->|Provision| VPC[AWS VPC]
+        TF -->|Provision| EKS[AWS EKS]
+    end
+
     subgraph "GitHub Ecosystem"
         Repo["GitHub Repo (nitzanim-final-workshop)"] --> GHA["GitHub Actions (CI/CD)"]
         GHA -->|Push Image| ECR["Amazon ECR"]
@@ -57,12 +63,23 @@ graph TD
 
 ## 🚀 Deployment Pipeline
 
-### 1. Infrastructure (IaC)
-The foundational infrastructure is managed via **Terraform**, located in the `/terraform` directory.
-- **VPC**: Multi-AZ network with public and private subnets.
-- **EKS**: Managed cluster with `t3.medium` node groups.
-- **IAM**: Configured with IRSA (IAM Roles for Service Accounts) for secure access to AWS resources.
-- **Bootstrap**: ArgoCD is automatically installed using the Helm provider.
+### 1. Infrastructure (IaC) - Terraform Depth
+The foundational infrastructure is managed via **Terraform**, providing a repeatable and version-controlled environment.
+- **Remote Backend**: Uses an **S3 Bucket** (`nitzanim-tf-state-yarin-noa`) for state storage, ensuring consistency and enabling collaboration.
+- **VPC Module**: 
+    - Configured across **2 Availability Zones** (us-east-1a, us-east-1b).
+    - **Public Subnets**: Host the Load Balancer and NAT Gateway.
+    - **Private Subnets**: Host the EKS Worker Nodes for enhanced security.
+    - **NAT Gateway**: Allows private nodes to access the internet (e.g., for pulling updates) without being directly reachable from outside.
+- **EKS Module**: 
+    - **Version**: 1.35.
+    - **Worker Nodes**: Managed Node Groups using `t3.medium` instances for a balance of cost and performance.
+    - **OIDC Provider**: Enabled to support **IRSA** (IAM Roles for Service Accounts).
+- **IAM & IRSA**: 
+    - Fine-grained permissions for cluster add-ons.
+    - Dedicated roles for the **AWS Load Balancer Controller** and **External-DNS**, allowing them to interact securely with AWS APIs (ALB, Route53) using Kubernetes ServiceAccounts.
+- **ECR**: Private container registry with lifecycle policies to manage image versions.
+- **ArgoCD Bootstrap**: Automatically deployed via Terraform's Helm provider once the cluster is ready.
 
 ### 2. CI/CD Flow
 The application follows a standard CI/CD process:
