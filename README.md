@@ -26,35 +26,58 @@ This repository contains the complete infrastructure and application lifecycle f
 
 ```mermaid
 graph TD
-    subgraph "External Traffic"
-        DNS[Route53: status.yarin-noa.site] --> ALB[AWS Application Load Balancer]
+    %% Global Styles
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white;
+    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:2px,color:white;
+    classDef db fill:#333,stroke:#f80,stroke-width:2px,color:white;
+    classDef gh fill:#24292e,stroke:#fff,stroke-width:2px,color:white;
+    classDef app fill:#28a745,stroke:#fff,stroke-width:2px,color:white;
+
+    subgraph "🌐 External Traffic"
+        DNS["☁️ Route53: status.yarin-noa.site"]:::aws --> ALB["🔌 AWS Application Load Balancer"]:::aws
     end
 
-    subgraph "DevOps Infrastructure"
-        TF[Terraform] -->|State| S3[S3 Bucket: nitzanim-tf-state]
-        TF -->|Provision| VPC[AWS VPC]
-        TF -->|Provision| EKS[AWS EKS]
+    subgraph "⚙️ DevOps Infrastructure (Terraform)"
+        TF["🚜 Terraform"]:::gh -->|State| S3["📦 S3 Bucket: State Store"]:::aws
+        TF -->|Provision| VPC["🌐 AWS VPC (Private/Public)"]:::aws
+        TF -->|Provision| EKS["☸️ AWS EKS Cluster"]:::aws
     end
 
-    subgraph "GitHub Ecosystem"
-        Repo["GitHub Repo (nitzanim-final-workshop)"] --> GHA["GitHub Actions (CI/CD)"]
-        GHA -->|Push Image| ECR["Amazon ECR"]
+    subgraph "🐙 GitHub Ecosystem"
+        Repo["📂 GitHub Repo"]:::gh --> GHA["🤖 GitHub Actions"]:::gh
+        GHA -->|Push| ECR["📦 Amazon ECR"]:::aws
     end
 
-    subgraph "AWS EKS Cluster"
-        ALB --> Ing["ALB Ingress Controller"]
-        Ing --> SVC["K8s Service"]
-        SVC --> Pods["StatusPage Pods (Django)"]
+    subgraph "☸️ AWS EKS Cluster (v1.35)"
+        ALB --> Ing["🕸️ ALB Ingress Controller"]:::k8s
+        Ing --> SVC["🔌 K8s Service"]:::k8s
         
-        Argo["ArgoCD (GitOps)"] -.->|Sync Manifests| Repo
-        Argo -->|Deploy/Sync| Pods
+        subgraph "🚀 Application Layer"
+            SVC --> Pods["📱 StatusPage Pods (Gunicorn)"]:::app
+            Worker["👷 Background Worker (RQ)"]:::app
+            Init["🏁 Init: Run Migrations"]:::app -.-> Pods
+        end
+
+        subgraph "💾 Persistence & Cache"
+            Pods --> DB[("🐘 PostgreSQL")]:::db
+            Worker --> DB
+            Pods --> Cache[("🔋 Redis")]:::db
+            Worker --> Cache
+        end
         
-        ESO["External Secrets Operator"] -->|Fetch| SM["AWS Secrets Manager"]
+        Argo["🐙 ArgoCD (GitOps)"]:::k8s -.->|Sync| Repo
+        Argo -->|Deploy| Pods
         
-        subgraph "Observability Layer"
-            Prom["Prometheus"] -->|Scrape| Pods
-            Graf["Grafana"] -->|Visualize| Prom
-            Loki["Loki"] -->|Logs| Pods
+        subgraph "🔐 Security"
+            ESO["🔑 External Secrets Operator"]:::k8s -->|Fetch| SM["🔐 AWS Secrets Manager"]:::aws
+            SM -->|Sync| K8sSec["📄 K8s Secret"]:::k8s
+            K8sSec -.->|Inject| Pods
+        end
+        
+        subgraph "📊 Observability"
+            Prom["📈 Prometheus"]:::k8s -->|Scrape| Pods
+            Graf["🎨 Grafana"]:::k8s -->|Visualize| Prom
+            Loki["📝 Loki"]:::k8s -->|Logs| Pods
         end
     end
 ```
