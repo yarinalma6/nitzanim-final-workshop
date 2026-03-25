@@ -25,64 +25,45 @@ This repository contains the complete infrastructure and application lifecycle f
 ## 📐 Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '18px', 'fontFamily': 'Inter, system-ui, sans-serif'}}}%%
-graph TD
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '24px', 'fontFamily': 'arial', 'primaryColor': '#326ce5'}, 'flowchart': {'nodeSpacing': 80, 'rankSpacing': 120, 'curve': 'basis'}}}%%
+graph LR
     %% Global Styles
-    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:3px,color:white,font-weight:bold,padding:20px;
-    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:3px,color:white,font-weight:bold,padding:20px;
-    classDef db fill:#333,stroke:#f80,stroke-width:3px,color:white,font-weight:bold,padding:20px;
-    classDef gh fill:#24292e,stroke:#fff,stroke-width:3px,color:white,font-weight:bold,padding:20px;
-    classDef app fill:#28a745,stroke:#fff,stroke-width:3px,color:white,font-weight:bold,padding:20px;
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:4px,color:white,font-weight:bold;
+    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:4px,color:white,font-weight:bold;
+    classDef db fill:#333,stroke:#f80,stroke-width:4px,color:white,font-weight:bold;
+    classDef gh fill:#24292e,stroke:#fff,stroke-width:4px,color:white,font-weight:bold;
+    classDef app fill:#28a745,stroke:#fff,stroke-width:4px,color:white,font-weight:bold;
 
-    subgraph "🌐 External Traffic"
-        DNS["☁️ Route53: status.yarin-noa.site"]:::aws --> ALB["🔌 AWS Application Load Balancer"]:::aws
-    end
-
-    subgraph "⚙️ DevOps Infrastructure (Terraform)"
-        TF["🚜 Terraform IaC"]:::gh -->|State| S3["📦 S3 Bucket: State Store"]:::aws
-        TF -->|Provision| VPC["🌐 AWS VPC (Private/Public)"]:::aws
-        TF -->|Provision| EKS["☸️ AWS EKS Cluster"]:::aws
-    end
-
-    subgraph "🐙 GitHub Ecosystem"
-        Repo["📂 GitHub Repo (Single Source of Truth)"]:::gh --> GHA["🤖 GitHub Actions (CI/CD)"]:::gh
-        GHA -->|1. Build & Push| ECR["📦 Amazon ECR Registry"]:::aws
+    subgraph "🛠️ Infrastructure & CI/CD"
+        TF["🚜 Terraform IaC"]:::gh -->|State| S3["📦 S3: State"]:::aws
+        Repo["📂 GitHub Repo (SSOT)"]:::gh --> GHA["🤖 GitHub Actions"]:::gh
+        GHA -->|1. Build & Push| ECR["📦 Amazon ECR"]:::aws
     end
 
     subgraph "☸️ AWS EKS Cluster (v1.35)"
-        ALB --> Ing["🕸️ ALB Ingress Controller"]:::k8s
-        Ing --> SVC["🔌 K8s Service"]:::k8s
+        direction TB
+        Argo["🐙 ArgoCD (GitOps)"]:::k8s -- "2. Sync" --> Repo
         
-        subgraph "🚀 Application Layer"
+        ALB["🔌 AWS ALB"]:::aws --> Ing["🕸️ Ingress"]:::k8s
+        Ing --> SVC["🔌 Service"]:::k8s
+        
+        subgraph "🚀 App Layer"
             SVC --> Pods["📱 StatusPage Pods (Gunicorn)"]:::app
-            Worker["👷 Background Worker (RQ)"]:::app
-            Init["🏁 Init: Run Migrations"]:::app -.-> Pods
+            Worker["👷 Worker (RQ)"]:::app
         end
 
         ECR -->|3. Pull Image| Pods
         ECR -->|3. Pull Image| Worker
 
-        subgraph "💾 Persistence & Cache"
+        subgraph "💾 Data & Cache"
             Pods --> DB[("🐘 PostgreSQL DB")]:::db
-            Worker --> DB
             Pods --> Cache[("🔋 Redis Cache")]:::db
-            Worker --> Cache
         end
         
-        Argo["🐙 ArgoCD (GitOps)"]:::k8s -- "2. Watch & Sync Manifests" --> Repo
-        Argo -- "Update Deployment" --> Pods
-        Argo -- "Update Deployment" --> Worker
-        
-        subgraph "🔐 Security"
-            ESO["🔑 External Secrets Operator"]:::k8s -->|Fetch| SM["🔐 AWS Secrets Manager"]:::aws
-            SM -->|Sync| K8sSec["📄 K8s Secret"]:::k8s
-            K8sSec -.->|Inject| Pods
-        end
-        
-        subgraph "📊 Observability"
+        subgraph "🔐 Security & Monitoring"
+            ESO["🔑 ESO"]:::k8s -->|Fetch| SM["🔐 Secrets Manager"]:::aws
             Prom["📈 Prometheus"]:::k8s -->|Scrape| Pods
-            Graf["🎨 Grafana"]:::k8s -->|Visualize| Prom
-            Loki["📝 Loki"]:::k8s -->|Logs| Pods
+            Graf["🎨 Grafana"]:::k8s
         end
     end
 ```
