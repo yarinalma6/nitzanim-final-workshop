@@ -44,8 +44,8 @@ graph TD
     end
 
     subgraph "🐙 GitHub Ecosystem"
-        Repo["📂 GitHub Repo"]:::gh --> GHA["🤖 GitHub Actions"]:::gh
-        GHA -->|Push| ECR["📦 Amazon ECR"]:::aws
+        Repo["📂 GitHub Repo (Single Source of Truth)"]:::gh --> GHA["🤖 GitHub Actions"]:::gh
+        GHA -->|1. Build & Push| ECR["📦 Amazon ECR"]:::aws
     end
 
     subgraph "☸️ AWS EKS Cluster (v1.35)"
@@ -58,6 +58,9 @@ graph TD
             Init["🏁 Init: Run Migrations"]:::app -.-> Pods
         end
 
+        ECR -->|3. Pull Image| Pods
+        ECR -->|3. Pull Image| Worker
+
         subgraph "💾 Persistence & Cache"
             Pods --> DB[("🐘 PostgreSQL")]:::db
             Worker --> DB
@@ -65,8 +68,9 @@ graph TD
             Worker --> Cache
         end
         
-        Argo["🐙 ArgoCD (GitOps)"]:::k8s -.->|Sync| Repo
-        Argo -->|Deploy| Pods
+        Argo["🐙 ArgoCD (GitOps)"]:::k8s -- "2. Watch & Sync Manifests" --> Repo
+        Argo -- "Update Deployment" --> Pods
+        Argo -- "Update Deployment" --> Worker
         
         subgraph "🔐 Security"
             ESO["🔑 External Secrets Operator"]:::k8s -->|Fetch| SM["🔐 AWS Secrets Manager"]:::aws
